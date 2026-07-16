@@ -185,6 +185,40 @@ function embedFontStyles(doc: Document, element: HTMLElement) {
 }
 
 /**
+ * Clean up a slide element by removing UI controls before export.
+ */
+function cleanSlideForExport(slideElement: HTMLElement): HTMLElement {
+  const clone = slideElement.cloneNode(true) as HTMLElement;
+
+  // Remove UI elements that shouldn't be in the export
+  const removeSelectors = [
+    '[id^="add-element-"]',
+    '[id^="element-menubar-"]',
+    '[id^="slide-menubar-"]',
+    '[data-slot="tooltip-trigger"]',
+    'button[aria-label="Add element"]',
+  ];
+
+  removeSelectors.forEach((selector) => {
+    clone.querySelectorAll(selector).forEach((el) => el.remove());
+  });
+
+  // Remove any remaining buttons that look like UI controls
+  clone.querySelectorAll('button').forEach((btn) => {
+    // Keep only if it's part of the content (unlikely)
+    if (btn.closest('[id^="page-base-"]') && !btn.closest('[id^="add-element-"]')) {
+      // This button is inside the page content, check if it's a UI control
+      const text = btn.textContent?.trim();
+      if (text === '+' || text === '' || btn.querySelector('svg')) {
+        btn.remove();
+      }
+    }
+  });
+
+  return clone;
+}
+
+/**
  * Capture a slide element to a data URL with high quality settings.
  */
 async function captureSlideToDataUrl(
@@ -193,33 +227,44 @@ async function captureSlideToDataUrl(
   quality: number,
   scale: number = IMAGE_EXPORT_SCALE
 ): Promise<string> {
+  // Clean the slide before capturing
+  const cleanSlide = cleanSlideForExport(slideElement);
+
+  // Temporarily append to DOM for rendering
+  cleanSlide.style.position = 'absolute';
+  cleanSlide.style.left = '-9999px';
+  cleanSlide.style.top = '0';
+  document.body.appendChild(cleanSlide);
+
   const options: HtmlToImageOptions = {
-    width: slideElement.offsetWidth,
-    height: slideElement.offsetHeight,
-    canvasWidth: slideElement.offsetWidth * scale,
-    canvasHeight: slideElement.offsetHeight * scale,
+    width: cleanSlide.offsetWidth,
+    height: cleanSlide.offsetHeight,
+    canvasWidth: cleanSlide.offsetWidth * scale,
+    canvasHeight: cleanSlide.offsetHeight * scale,
     pixelRatio: scale,
     style: {
       margin: "0",
       padding: "0",
     },
-    // Cache busting for fonts
     cacheBust: true,
   };
 
-  const modified = flattenGradientText(slideElement);
+  const modified = flattenGradientText(cleanSlide);
 
   try {
+    let dataUrl: string;
     if (format === "png") {
-      return await toPng(slideElement, options);
+      dataUrl = await toPng(cleanSlide, options);
     } else if (format === "webp") {
-      const canvas = await toCanvas(slideElement, options);
-      return canvas.toDataURL("image/webp", quality);
+      const canvas = await toCanvas(cleanSlide, options);
+      dataUrl = canvas.toDataURL("image/webp", quality);
     } else {
-      return await toJpeg(slideElement, { ...options, quality });
+      dataUrl = await toJpeg(cleanSlide, { ...options, quality });
     }
+    return dataUrl;
   } finally {
     restoreGradientText(modified);
+    document.body.removeChild(cleanSlide);
   }
 }
 
@@ -252,6 +297,17 @@ export function useComponentPrinter() {
       removeAllById(clone, "add-element-");
       removeAllById(clone, "element-menubar-");
       removeAllById(clone, "slide-menubar-");
+
+      // Remove any remaining buttons and UI controls
+      clone.querySelectorAll('button').forEach(btn => {
+        const text = btn.textContent?.trim();
+        if (text === '+' || text === '' || btn.querySelector('svg')) {
+          btn.remove();
+        }
+      });
+
+      // Remove tooltip triggers and other UI elements
+      clone.querySelectorAll('[data-slot="tooltip-trigger"]').forEach(el => el.remove());
 
       // Embed fonts for proper rendering
       embedFontStyles(document, clone);
