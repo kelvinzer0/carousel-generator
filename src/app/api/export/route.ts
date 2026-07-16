@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Dynamic import to avoid bundling issues
-    const { chromium } = await import("playwright-core");
+    const { chromium } = await import("playwright");
 
     const browser = await chromium.launch({
       executablePath: CHROMIUM_PATH,
