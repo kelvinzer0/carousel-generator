@@ -67,7 +67,13 @@ export function CommonPage({
 
   return (
     <PageBase size={size} fieldName={backgroundImageField}>
-      <BackgroundLayer background={config.theme.background} className="-z-20" />
+      <BackgroundLayer
+        background={config.theme.background}
+        backgroundType={config.theme.backgroundType}
+        gradient={config.theme.gradient}
+        texture={config.theme.texture}
+        className="-z-20"
+      />
       {slide.backgroundImage?.source.src ? (
         <BackgroundImageLayer image={slide.backgroundImage} className="-z-10" />
       ) : null}
