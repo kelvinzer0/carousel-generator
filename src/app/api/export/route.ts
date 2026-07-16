@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Path to Playwright's bundled Chromium
-const CHROMIUM_PATH = "/opt/ms-playwright/chromium-1223/chrome-linux/chrome";
+const CHROMIUM_PATH = "/opt/ms-playwright/chromium-1223/chrome-linux64/chrome";
 
 interface ExportRequest {
   url: string;
