@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Icons } from "@/components/icons";
 import { Button, buttonVariants } from "./ui/button";
 import { EditorMenubar } from "./editor-menubar";
-import { Download, Loader2Icon, Settings, ChevronDown, Sparkles } from "lucide-react";
+import { Download, Loader2Icon, Settings, ChevronDown } from "lucide-react";
 import Pager from "./pager";
 import { FilenameForm } from "./forms/filename-form";
 import { BringYourKeysDialog } from "@/components/api-keys-dialog";
@@ -31,23 +31,13 @@ export type MainNavItem = NavItem;
 
 interface MainNavProps {
   handlePrint: () => void;
-  handlePrintHQ: () => Promise<void>;
   isPrinting: boolean;
   exportAsImages: (format: ExportImageFormat, quality?: number) => Promise<void>;
-  exportAsImagesHQ: (format: ExportImageFormat, quality?: number) => Promise<void>;
   isExporting: boolean;
   className?: string;
 }
 
-export function MainNav({
-  handlePrint,
-  handlePrintHQ,
-  isPrinting,
-  exportAsImages,
-  exportAsImagesHQ,
-  isExporting,
-  className,
-}: MainNavProps) {
+export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, className }: MainNavProps) {
   const isLoading = isPrinting || isExporting;
 
   return (
@@ -85,54 +75,33 @@ export function MainNav({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-yellow-500" />
-              High Quality (Server)
-            </DropdownMenuLabel>
-            <DropdownMenuItem onClick={handlePrintHQ} disabled={isLoading}>
-              <Download className="w-4 h-4 mr-2" />
-              PDF (HQ)
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => exportAsImagesHQ("png")}
-              disabled={isLoading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              PNG (HQ)
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => exportAsImagesHQ("jpeg")}
-              disabled={isLoading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              JPEG (HQ)
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Fast Export (Client)</DropdownMenuLabel>
+            <DropdownMenuLabel>Export as PDF</DropdownMenuLabel>
             <DropdownMenuItem onClick={handlePrint} disabled={isLoading}>
               <Download className="w-4 h-4 mr-2" />
-              PDF
+              Download PDF
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Export as Images (ZIP)</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => exportAsImages("png")}
               disabled={isLoading}
             >
               <Download className="w-4 h-4 mr-2" />
-              PNG images (ZIP)
+              PNG images
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => exportAsImages("webp")}
               disabled={isLoading}
             >
               <Download className="w-4 h-4 mr-2" />
-              WEBP images (ZIP)
+              WEBP images
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => exportAsImages("jpeg")}
               disabled={isLoading}
             >
               <Download className="w-4 h-4 mr-2" />
-              JPEG images (ZIP)
+              JPEG images
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -155,6 +124,16 @@ export function MainNav({
             <span className="sr-only">GitHub</span>
           </div>
         </Link>
+        {/* // TODO: Re-enable your own keys system  */}
+        {/* <BringYourKeysDialog
+          triggerButton={
+            <Button variant="ghost" size={"icon"}>
+              <div className="flex flex-row gap-1 items-center">
+                <Settings />
+              </div>
+            </Button>
+          }
+        /> */}
       </div>
     </div>
   );
