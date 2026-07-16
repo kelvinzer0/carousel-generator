@@ -117,6 +117,45 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
   return Array.from(items) as HTMLElement[];
 }
 
+function flattenGradientText(container: HTMLElement) {
+  const elements = container.querySelectorAll('*');
+  const modified: { el: HTMLElement; origStyle: string }[] = [];
+  
+  elements.forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    const style = htmlEl.style;
+    const computed = window.getComputedStyle(htmlEl);
+    
+    if (computed.backgroundClip === 'text' || computed.webkitBackgroundClip === 'text') {
+      modified.push({ el: htmlEl, origStyle: htmlEl.getAttribute('style') || '' });
+      
+      // Get the first color from background-image or fallback to current color
+      const bgImage = computed.backgroundImage;
+      let fallbackColor = computed.color;
+      
+      // Try to extract first color from gradient
+      const colorMatch = bgImage.match(/rgb[a]?\([^)]+\)|#[0-9a-fA-F]{3,8}/);
+      if (colorMatch) {
+        fallbackColor = colorMatch[0];
+      }
+      
+      style.backgroundImage = 'none';
+      style.backgroundClip = 'unset';
+      style.webkitBackgroundClip = 'unset';
+      style.color = fallbackColor;
+      style.webkitTextFillColor = fallbackColor;
+    }
+  });
+  
+  return modified;
+}
+
+function restoreGradientText(modified: { el: HTMLElement; origStyle: string }[]) {
+  modified.forEach(({ el, origStyle }) => {
+    el.setAttribute('style', origStyle);
+  });
+}
+
 async function captureSlideToDataUrl(
   slideElement: HTMLElement,
   format: ExportImageFormat,
@@ -134,14 +173,21 @@ async function captureSlideToDataUrl(
     },
   };
 
-  if (format === "png") {
-    return toPng(slideElement, options);
-  } else if (format === "webp") {
-    // html-to-image doesn't export toWebp, use canvas fallback
-    const canvas = await toCanvas(slideElement, options);
-    return canvas.toDataURL("image/webp", quality);
-  } else {
-    return toJpeg(slideElement, { ...options, quality });
+  // Temporarily flatten gradient text for export compatibility
+  const modified = flattenGradientText(slideElement);
+
+  try {
+    if (format === "png") {
+      return await toPng(slideElement, options);
+    } else if (format === "webp") {
+      const canvas = await toCanvas(slideElement, options);
+      return canvas.toDataURL("image/webp", quality);
+    } else {
+      return await toJpeg(slideElement, { ...options, quality });
+    }
+  } finally {
+    // Restore gradient styles after export
+    restoreGradientText(modified);
   }
 }
 
@@ -225,9 +271,12 @@ export function useComponentPrinter() {
       };
 
       // TODO Create buttons to download as png / svg / etc from 'html-to-image'
+      // Flatten gradient text for export compatibility
+      const modified = flattenGradientText(html);
       const canvas = await toCanvas(html, options.htmlToImage).catch((err) => {
         console.error(err);
       });
+      restoreGradientText(modified);
       if (!canvas) {
         console.error("Failed to create canvas");
         return;
