@@ -5,7 +5,7 @@ import {
 } from "@/lib/document-form-types";
 import { Document } from "./pages/document";
 import useWindowDimensions from "@/lib/hooks/use-window-dimensions";
-import { SIZE } from "@/lib/page-size";
+import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 import { LoadingSpinner } from "./loading-spinner";
 import { usePagerContext } from "@/lib/providers/pager-context";
 import { useFieldArrayValues } from "@/lib/hooks/use-field-array-values";
@@ -46,6 +46,8 @@ export function SlidesEditor({}: SlidesEditorProps) {
   }, [setStatus]);
 
   // Screen with larger than md side have smaller slides because the sidebar is present
+  const sizePresetKey = (document.config?.pageSize || "linkedin") as SizePresetKey;
+  const SIZE = SIZE_PRESETS[sizePresetKey] || SIZE_PRESETS.linkedin;
   const mdWindowWidthPx = 770;
   const screenToSlideMinRatio = windowWidth > mdWindowWidthPx ? 2.5 : 1.2;
   const scale = Math.min(1, windowWidth / screenToSlideMinRatio / SIZE.width);

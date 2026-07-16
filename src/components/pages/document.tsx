@@ -2,7 +2,7 @@
 import * as z from "zod";
 import React, { useEffect } from "react";
 import { DocumentSchema } from "@/lib/validation/document-schema";
-import { SIZE } from "@/lib/page-size";
+import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 import { usePagerContext } from "@/lib/providers/pager-context";
 import { cn } from "@/lib/utils";
 import { NewPage } from "@/components/pages/new-page";
@@ -36,6 +36,8 @@ export function Document({
   slidesFieldArray: SlidesFieldArrayReturn;
   scale: number;
 }) {
+  const sizePresetKey = (document.config?.pageSize || "linkedin") as SizePresetKey;
+  const SIZE = SIZE_PRESETS[sizePresetKey] || SIZE_PRESETS.linkedin;
   const docReference = useRefContext();
   const [api, setApi] = React.useState<CarouselApi>();
 

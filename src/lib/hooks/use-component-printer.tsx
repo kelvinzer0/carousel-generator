@@ -1,6 +1,6 @@
 import React from "react";
 import { useReactToPrint } from "react-to-print";
-import { SIZE } from "@/lib/page-size";
+import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 import { useFieldArrayValues } from "@/lib/hooks/use-field-array-values";
 import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
@@ -148,6 +148,9 @@ async function captureSlideToDataUrl(
 export function useComponentPrinter() {
   const { numPages } = useFieldArrayValues("slides");
   const { watch }: DocumentFormReturn = useFormContext();
+
+  const sizePresetKey = (watch("config.pageSize") || "linkedin") as SizePresetKey;
+  const SIZE = SIZE_PRESETS[sizePresetKey] || SIZE_PRESETS.linkedin;
 
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);

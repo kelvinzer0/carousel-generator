@@ -4,12 +4,14 @@ import { ThemeSchema } from "./theme-schema";
 import { BrandSchema } from "./brand-schema";
 import { FontsSchema } from "./fonts-schema";
 import { PageNumberSchema } from "./page-number-schema";
+import { PageSizeSchema } from "./page-size-schema";
 
 export const ConfigSchema = z.object({
   brand: BrandSchema,
   theme: ThemeSchema,
   fonts: FontsSchema,
   pageNumber: PageNumberSchema,
+  pageSize: PageSizeSchema.default("linkedin"),
 });
 
 export const DocumentSchema = z.object({

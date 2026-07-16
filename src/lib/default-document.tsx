@@ -36,6 +36,7 @@ export const defaultValues = {
     pageNumber: {
       showNumbers: true,
     },
+    pageSize: "linkedin" as const,
   },
   filename: "My Carousel File",
 };
