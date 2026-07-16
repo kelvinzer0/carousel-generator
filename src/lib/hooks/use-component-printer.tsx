@@ -348,18 +348,22 @@ function proxyImgSources(html: HTMLElement) {
   const images = Array.from(
     html.getElementsByTagName("img")
   ) as HTMLImageElement[];
-  const url = process.env.NEXT_PUBLIC_APP_URL;
+  const url = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
   const externalImages = images.filter(
-    (image) => !image.src.startsWith("/") && !image.src.startsWith("data:")
+    (image) => !image.src.startsWith("/") && !image.src.startsWith("data:") && !image.src.startsWith(url)
   );
 
   // TODO: Make a single request with the list of images
   externalImages.forEach((image) => {
-    const apiRequestURL = new URL(`${url}/api/proxy`);
-    apiRequestURL.searchParams.set("url", image.src);
-    // TODO: Consider using the cache of fetch
-    image.src = apiRequestURL.toString();
+    try {
+      const apiRequestURL = new URL(`${url}/api/proxy`);
+      apiRequestURL.searchParams.set("url", image.src);
+      // TODO: Consider using the cache of fetch
+      image.src = apiRequestURL.toString();
+    } catch (e) {
+      console.warn("Failed to proxy image:", image.src, e);
+    }
   });
 }
 
