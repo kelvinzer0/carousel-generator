@@ -185,37 +185,43 @@ function embedFontStyles(doc: Document, element: HTMLElement) {
 }
 
 /**
- * Clean up a slide element by removing UI controls before export.
+ * Hide UI elements in a slide before capture, return restore function.
  */
-function cleanSlideForExport(slideElement: HTMLElement): HTMLElement {
-  const clone = slideElement.cloneNode(true) as HTMLElement;
+function hideUIElements(slideElement: HTMLElement): () => void {
+  const hidden: { el: HTMLElement; display: string }[] = [];
 
-  // Remove UI elements that shouldn't be in the export
-  const removeSelectors = [
+  // Elements to hide
+  const selectors = [
     '[id^="add-element-"]',
     '[id^="element-menubar-"]',
     '[id^="slide-menubar-"]',
     '[data-slot="tooltip-trigger"]',
-    'button[aria-label="Add element"]',
   ];
 
-  removeSelectors.forEach((selector) => {
-    clone.querySelectorAll(selector).forEach((el) => el.remove());
+  selectors.forEach((selector) => {
+    slideElement.querySelectorAll(selector).forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      hidden.push({ el: htmlEl, display: htmlEl.style.display });
+      htmlEl.style.display = 'none';
+    });
   });
 
-  // Remove any remaining buttons that look like UI controls
-  clone.querySelectorAll('button').forEach((btn) => {
-    // Keep only if it's part of the content (unlikely)
-    if (btn.closest('[id^="page-base-"]') && !btn.closest('[id^="add-element-"]')) {
-      // This button is inside the page content, check if it's a UI control
-      const text = btn.textContent?.trim();
-      if (text === '+' || text === '' || btn.querySelector('svg')) {
-        btn.remove();
-      }
+  // Hide buttons with + or SVG icons
+  slideElement.querySelectorAll('button').forEach((btn) => {
+    const htmlBtn = btn as HTMLElement;
+    const text = htmlBtn.textContent?.trim();
+    if (text === '+' || text === '' || htmlBtn.querySelector('svg')) {
+      hidden.push({ el: htmlBtn, display: htmlBtn.style.display });
+      htmlBtn.style.display = 'none';
     }
   });
 
-  return clone;
+  // Return restore function
+  return () => {
+    hidden.forEach(({ el, display }) => {
+      el.style.display = display;
+    });
+  };
 }
 
 /**
@@ -227,20 +233,14 @@ async function captureSlideToDataUrl(
   quality: number,
   scale: number = IMAGE_EXPORT_SCALE
 ): Promise<string> {
-  // Clean the slide before capturing
-  const cleanSlide = cleanSlideForExport(slideElement);
-
-  // Temporarily append to DOM for rendering
-  cleanSlide.style.position = 'absolute';
-  cleanSlide.style.left = '-9999px';
-  cleanSlide.style.top = '0';
-  document.body.appendChild(cleanSlide);
+  // Hide UI elements before capture
+  const restoreUI = hideUIElements(slideElement);
 
   const options: HtmlToImageOptions = {
-    width: cleanSlide.offsetWidth,
-    height: cleanSlide.offsetHeight,
-    canvasWidth: cleanSlide.offsetWidth * scale,
-    canvasHeight: cleanSlide.offsetHeight * scale,
+    width: slideElement.offsetWidth,
+    height: slideElement.offsetHeight,
+    canvasWidth: slideElement.offsetWidth * scale,
+    canvasHeight: slideElement.offsetHeight * scale,
     pixelRatio: scale,
     style: {
       margin: "0",
@@ -249,22 +249,22 @@ async function captureSlideToDataUrl(
     cacheBust: true,
   };
 
-  const modified = flattenGradientText(cleanSlide);
+  const modified = flattenGradientText(slideElement);
 
   try {
     let dataUrl: string;
     if (format === "png") {
-      dataUrl = await toPng(cleanSlide, options);
+      dataUrl = await toPng(slideElement, options);
     } else if (format === "webp") {
-      const canvas = await toCanvas(cleanSlide, options);
+      const canvas = await toCanvas(slideElement, options);
       dataUrl = canvas.toDataURL("image/webp", quality);
     } else {
-      dataUrl = await toJpeg(cleanSlide, { ...options, quality });
+      dataUrl = await toJpeg(slideElement, { ...options, quality });
     }
     return dataUrl;
   } finally {
     restoreGradientText(modified);
-    document.body.removeChild(cleanSlide);
+    restoreUI();
   }
 }
 
