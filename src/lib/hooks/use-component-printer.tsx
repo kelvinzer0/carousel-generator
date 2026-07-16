@@ -10,8 +10,6 @@ import { jsPDF, jsPDFOptions } from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
-// TODO: Create a reusable component and package with this code
-
 export type ExportImageFormat = "png" | "webp" | "jpeg";
 
 const FORMAT_EXT: Record<ExportImageFormat, string> = {
@@ -19,6 +17,10 @@ const FORMAT_EXT: Record<ExportImageFormat, string> = {
   webp: "webp",
   jpeg: "jpg",
 };
+
+// High quality scale factors
+const EXPORT_SCALE = 3; // 3x for high quality print (300 DPI equivalent)
+const IMAGE_EXPORT_SCALE = 4; // 4x for image exports
 
 type HtmlToPdfOptions = {
   margin: [number, number, number, number];
@@ -28,17 +30,14 @@ type HtmlToPdfOptions = {
   jsPDF: jsPDFOptions;
 };
 
-// Convert units to px using the conversion value 'k' from jsPDF.
 export const toPx = function toPx(val: number, k: number) {
   return Math.floor(((val * k) / 72) * 96);
 };
 
 function getPdfPageSize(opt: HtmlToPdfOptions) {
-  // Retrieve page-size based on jsPDF settings, if not explicitly provided.
-  // @ts-ignore function not explicitly exported
+  // @ts-ignore
   const pageSize = jsPDF.getPageSize(opt.jsPDF);
 
-  // Add 'inner' field if not present.
   if (!pageSize.hasOwnProperty("inner")) {
     pageSize.inner = {
       width: pageSize.width - opt.margin[1] - opt.margin[3],
@@ -51,42 +50,31 @@ function getPdfPageSize(opt: HtmlToPdfOptions) {
     pageSize.inner.ratio = pageSize.inner.height / pageSize.inner.width;
   }
 
-  // Attach pageSize to this.
   return pageSize;
 }
 
 function canvasToPdf(canvas: HTMLCanvasElement, opt: HtmlToPdfOptions) {
   const pdfPageSize = getPdfPageSize(opt);
 
-  // Calculate the number of pages.
   var pxFullHeight = canvas.height;
   var pxPageHeight = Math.floor(canvas.width * pdfPageSize.inner.ratio);
   var nPages = Math.ceil(pxFullHeight / pxPageHeight);
-
-  // Define pageHeight separately so it can be trimmed on the final page.
   var pageHeight = pdfPageSize.inner.height;
 
-  // Create a one-page canvas to split up the full image.
   var pageCanvas = document.createElement("canvas");
-  var pageCtx = pageCanvas.getContext("2d");
-  if (!pageCtx) {
-    throw Error("Canvas context of created element not found");
-  }
+  var pageCtx = pageCanvas.getContext("2d")!;
   pageCanvas.width = canvas.width;
   pageCanvas.height = pxPageHeight;
 
-  // Initialize the PDF.
   const pdf = new jsPDF(opt.jsPDF);
 
   for (var page = 0; page < nPages; page++) {
-    // Trim the final page to reduce file size.
     if (page === nPages - 1 && pxFullHeight % pxPageHeight !== 0) {
       pageCanvas.height = pxFullHeight % pxPageHeight;
       pageHeight =
         (pageCanvas.height * pdfPageSize.inner.width) / pageCanvas.width;
     }
 
-    // Display the page.
     var w = pageCanvas.width;
     var h = pageCanvas.height;
 
@@ -94,7 +82,6 @@ function canvasToPdf(canvas: HTMLCanvasElement, opt: HtmlToPdfOptions) {
     pageCtx.fillRect(0, 0, w, h);
     pageCtx.drawImage(canvas, 0, page * pxPageHeight, w, h, 0, 0, w, h);
 
-    // Add the page to the PDF.
     if (page) pdf.addPage();
     var imgData = pageCanvas.toDataURL(
       "image/" + opt.image.type,
@@ -117,63 +104,109 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
   return Array.from(items) as HTMLElement[];
 }
 
+/**
+ * Flatten gradient/texture text to solid colors for export.
+ * html-to-image doesn't support background-clip: text in SVG foreignObject.
+ * Returns modified elements for restoration.
+ */
 function flattenGradientText(container: HTMLElement) {
-  const elements = container.querySelectorAll('*');
+  const elements = container.querySelectorAll("*");
   const modified: { el: HTMLElement; origStyle: string }[] = [];
-  
+
   elements.forEach((el) => {
     const htmlEl = el as HTMLElement;
-    const style = htmlEl.style;
     const computed = window.getComputedStyle(htmlEl);
-    
-    if (computed.backgroundClip === 'text' || computed.webkitBackgroundClip === 'text') {
-      modified.push({ el: htmlEl, origStyle: htmlEl.getAttribute('style') || '' });
-      
-      // Get the first color from background-image or fallback to current color
+
+    if (
+      computed.backgroundClip === "text" ||
+      computed.webkitBackgroundClip === "text"
+    ) {
+      modified.push({
+        el: htmlEl,
+        origStyle: htmlEl.getAttribute("style") || "",
+      });
+
       const bgImage = computed.backgroundImage;
-      let fallbackColor = computed.color;
-      
-      // Try to extract first color from gradient
-      const colorMatch = bgImage.match(/rgb[a]?\([^)]+\)|#[0-9a-fA-F]{3,8}/);
+      let fallbackColor = computed.color || "#000000";
+
+      // Extract first color from gradient
+      const colorMatch = bgImage.match(
+        /rgb[a]?\([^)]+\)|#[0-9a-fA-F]{3,8}|oklch\([^)]+\)/
+      );
       if (colorMatch) {
         fallbackColor = colorMatch[0];
       }
-      
-      style.backgroundImage = 'none';
-      style.backgroundClip = 'unset';
-      style.webkitBackgroundClip = 'unset';
-      style.color = fallbackColor;
-      style.webkitTextFillColor = fallbackColor;
+
+      htmlEl.style.backgroundImage = "none";
+      htmlEl.style.backgroundClip = "unset";
+      htmlEl.style.webkitBackgroundClip = "unset";
+      htmlEl.style.color = fallbackColor;
+      htmlEl.style.webkitTextFillColor = fallbackColor;
     }
   });
-  
+
   return modified;
 }
 
-function restoreGradientText(modified: { el: HTMLElement; origStyle: string }[]) {
+function restoreGradientText(
+  modified: { el: HTMLElement; origStyle: string }[]
+) {
   modified.forEach(({ el, origStyle }) => {
-    el.setAttribute('style', origStyle);
+    el.setAttribute("style", origStyle);
   });
 }
 
+/**
+ * Embed font-face declarations into the element for export.
+ * This ensures fonts are available when rendering to canvas.
+ */
+function embedFontStyles(doc: Document, element: HTMLElement) {
+  const styleSheets = Array.from(doc.styleSheets);
+  let fontCSS = "";
+
+  styleSheets.forEach((sheet) => {
+    try {
+      const rules = Array.from(sheet.cssRules || []);
+      rules.forEach((rule) => {
+        if (rule instanceof CSSFontFaceRule) {
+          fontCSS += rule.cssText + "\n";
+        }
+      });
+    } catch (e) {
+      // Cross-origin stylesheet, skip
+    }
+  });
+
+  if (fontCSS) {
+    const style = doc.createElement("style");
+    style.textContent = fontCSS;
+    element.prepend(style);
+  }
+}
+
+/**
+ * Capture a slide element to a data URL with high quality settings.
+ */
 async function captureSlideToDataUrl(
   slideElement: HTMLElement,
   format: ExportImageFormat,
-  quality: number
+  quality: number,
+  scale: number = IMAGE_EXPORT_SCALE
 ): Promise<string> {
-  const SCALE = 1.8;
   const options: HtmlToImageOptions = {
-    width: SIZE.width,
-    height: SIZE.height,
-    canvasWidth: SIZE.width * SCALE,
-    canvasHeight: SIZE.height * SCALE,
+    width: slideElement.offsetWidth,
+    height: slideElement.offsetHeight,
+    canvasWidth: slideElement.offsetWidth * scale,
+    canvasHeight: slideElement.offsetHeight * scale,
+    pixelRatio: scale,
     style: {
       margin: "0",
       padding: "0",
     },
+    // Cache busting for fonts
+    cacheBust: true,
   };
 
-  // Temporarily flatten gradient text for export compatibility
   const modified = flattenGradientText(slideElement);
 
   try {
@@ -186,7 +219,6 @@ async function captureSlideToDataUrl(
       return await toJpeg(slideElement, { ...options, quality });
     }
   } finally {
-    // Restore gradient styles after export
     restoreGradientText(modified);
   }
 }
@@ -195,26 +227,22 @@ export function useComponentPrinter() {
   const { numPages } = useFieldArrayValues("slides");
   const { watch }: DocumentFormReturn = useFormContext();
 
-  const sizePresetKey = (watch("config.pageSize") || "linkedin") as SizePresetKey;
+  const sizePresetKey = (watch("config.pageSize") ||
+    "linkedin") as SizePresetKey;
   const SIZE = SIZE_PRESETS[sizePresetKey] || SIZE_PRESETS.linkedin;
 
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
-  // TODO: Show animation on loading
   const componentRef = React.useRef(null);
-
-  // Packages and references
-  // react-to-print: https://github.com/gregnb/react-to-print
-  // html-to-image: https://github.com/bubkoo/html-to-image
-  // jsPDF: https://rawgit.com/MrRio/jsPDF/master/docs/jsPDF.html
 
   const reactToPrintContent = React.useCallback(() => {
     const current = componentRef.current;
 
     if (current && typeof current === "object") {
-      // @ts-ignore should type narrow more precisely
+      // @ts-ignore
       const clone = current.cloneNode(true);
-      // Change from horizontal to vertical for printing and remove gap
+
+      // Clean up the clone for export
       proxyImgSources(clone);
       removeSelectionStyleById(clone, "page-base-");
       removeSelectionStyleById(clone, "content-image-");
@@ -224,8 +252,11 @@ export function useComponentPrinter() {
       removeAllById(clone, "add-element-");
       removeAllById(clone, "element-menubar-");
       removeAllById(clone, "slide-menubar-");
+
+      // Embed fonts for proper rendering
+      embedFontStyles(document, clone);
       insertFonts(clone);
-      // Remove styling from container
+
       clone.className = "flex flex-col";
       clone.style = {};
 
@@ -240,7 +271,7 @@ export function useComponentPrinter() {
     removeAfterPrint: true,
     onBeforePrint: () => setIsPrinting(true),
     onAfterPrint: () => setIsPrinting(false),
-    pageStyle: `@page { size: ${SIZE.width}px ${SIZE.height}px;  margin: 0; } @media print { body { -webkit-print-color-adjust: exact; }}`,
+    pageStyle: `@page { size: ${SIZE.width}px ${SIZE.height}px; margin: 0; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`,
     print: async (printIframe) => {
       const contentDocument = printIframe.contentDocument;
       if (!contentDocument) {
@@ -248,14 +279,14 @@ export function useComponentPrinter() {
         return;
       }
 
-      const html = contentDocument.getElementById("element-to-download-as-pdf");
+      const html = contentDocument.getElementById(
+        "element-to-download-as-pdf"
+      );
       if (!html) {
         console.error("Couldn't find element to convert to PDF");
         return;
       }
 
-      const SCALE_TO_LINKEDIN_INTRINSIC_SIZE = 1.8;
-      // const fontEmbedCss = await getFontEmbedCSS(html);
       const options: HtmlToPdfOptions = {
         margin: [0, 0, 0, 0],
         filename: watch("filename"),
@@ -263,26 +294,28 @@ export function useComponentPrinter() {
         htmlToImage: {
           height: SIZE.height * numPages,
           width: SIZE.width,
-          canvasHeight:
-            SIZE.height * numPages * SCALE_TO_LINKEDIN_INTRINSIC_SIZE,
-          canvasWidth: SIZE.width * SCALE_TO_LINKEDIN_INTRINSIC_SIZE,
+          canvasHeight: SIZE.height * numPages * EXPORT_SCALE,
+          canvasWidth: SIZE.width * EXPORT_SCALE,
+          pixelRatio: EXPORT_SCALE,
+          cacheBust: true,
         },
         jsPDF: { unit: "px", format: [SIZE.width, SIZE.height] },
       };
 
-      // TODO Create buttons to download as png / svg / etc from 'html-to-image'
-      // Flatten gradient text for export compatibility
       const modified = flattenGradientText(html);
-      const canvas = await toCanvas(html, options.htmlToImage).catch((err) => {
-        console.error(err);
-      });
+      const canvas = await toCanvas(html, options.htmlToImage).catch(
+        (err) => {
+          console.error("Canvas generation failed:", err);
+          return null;
+        }
+      );
       restoreGradientText(modified);
+
       if (!canvas) {
         console.error("Failed to create canvas");
         return;
       }
-      // DEBUG:
-      // document.body.appendChild(canvas);
+
       const pdf = canvasToPdf(canvas, options);
       pdf.save(options.filename);
     },
@@ -309,13 +342,16 @@ export function useComponentPrinter() {
 
         for (let i = 0; i < slideElements.length; i++) {
           const slideEl = slideElements[i];
-          // Get the page content inside the carousel item
           const pageContent = slideEl.querySelector(
             "[id^='page-base-']"
           ) as HTMLElement;
           if (!pageContent) continue;
 
-          const dataUrl = await captureSlideToDataUrl(pageContent, format, quality);
+          const dataUrl = await captureSlideToDataUrl(
+            pageContent,
+            format,
+            quality
+          );
           const res = await fetch(dataUrl);
           const blob = await res.blob();
           const ext = FORMAT_EXT[format];
@@ -344,22 +380,22 @@ export function useComponentPrinter() {
 }
 
 function proxyImgSources(html: HTMLElement) {
-  // @ts-ignore
   const images = Array.from(
     html.getElementsByTagName("img")
   ) as HTMLImageElement[];
   const url = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
   const externalImages = images.filter(
-    (image) => !image.src.startsWith("/") && !image.src.startsWith("data:") && !image.src.startsWith(url)
+    (image) =>
+      !image.src.startsWith("/") &&
+      !image.src.startsWith("data:") &&
+      !image.src.startsWith(url)
   );
 
-  // TODO: Make a single request with the list of images
   externalImages.forEach((image) => {
     try {
       const apiRequestURL = new URL(`${url}/api/proxy`);
       apiRequestURL.searchParams.set("url", image.src);
-      // TODO: Consider using the cache of fetch
       image.src = apiRequestURL.toString();
     } catch (e) {
       console.warn("Failed to proxy image:", image.src, e);
@@ -371,7 +407,6 @@ function removeAllById(html: HTMLElement, id: string) {
   const elements = Array.from(
     html.querySelectorAll(`[id^=${id}]`)
   ) as HTMLDivElement[];
-
   elements.forEach((element) => {
     element.remove();
   });
@@ -404,22 +439,19 @@ function removeClassnames(element: HTMLDivElement, classNames: string): string {
 }
 
 function insertFonts(element: HTMLElement) {
-  // Get all elements in the document
   const allElements = Array.from(
-    element.getElementsByTagName(`textarea`)
+    element.getElementsByTagName("textarea")
   ) as HTMLTextAreaElement[];
 
-  // Iterate through each element
   allElements.forEach(function (element) {
     let tailwindFonts = element.className
       .split(" ")
       .filter((cn) => cn.startsWith("font-"));
 
-    // Get the computed style of the element
     tailwindFonts.forEach((font) => {
       const fontFaceValue = getComputedStyle(
         element.ownerDocument.body
-      ).getPropertyValue("--" + font); // Font var name convention is starts with `--font`
+      ).getPropertyValue("--" + font);
       if (fontFaceValue) {
         element.style.fontFamily = fontFaceValue;
       }
