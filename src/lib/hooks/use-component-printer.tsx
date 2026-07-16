@@ -210,6 +210,39 @@ async function captureSlideToDataUrl(
 }
 
 /**
+ * Collect clean carousel HTML for server-side export.
+ * Only includes the slide pages, not the full website UI.
+ */
+function collectCarouselHTML(): string {
+  const container = document.getElementById("element-to-download-as-pdf");
+  if (!container) return "";
+
+  // Clone the carousel container
+  const clone = container.cloneNode(true) as HTMLElement;
+
+  // Remove UI elements that shouldn't be in export
+  removeAllById(clone, "add-slide-");
+  removeAllById(clone, "add-element-");
+  removeAllById(clone, "element-menubar-");
+  removeAllById(clone, "slide-menubar-");
+  removeSelectionStyleById(clone, "page-base-");
+  removeSelectionStyleById(clone, "content-image-");
+  removePaddingStyleById(clone, "carousel-item-");
+
+  // Get only the slide pages
+  const slides = clone.querySelectorAll('[id^="carousel-item-"]');
+  const slidePages = Array.from(slides).map(slide => {
+    const pageContent = slide.querySelector('[id^="page-base-"]');
+    if (pageContent) {
+      return `<div class="slide-page">${pageContent.outerHTML}</div>`;
+    }
+    return "";
+  }).filter(Boolean);
+
+  return slidePages.join("\n");
+}
+
+/**
  * Server-side export using Playwright (high quality, consistent rendering)
  */
 async function serverSideExport(
@@ -219,12 +252,27 @@ async function serverSideExport(
   quality: number = 95,
   scale: number = 3
 ): Promise<Blob> {
-  const url = window.location.href;
+  const html = collectCarouselHTML();
+  if (!html) {
+    throw new Error("No carousel content found");
+  }
+
+  // Collect font families used
+  const fonts = new Set<string>();
+  document.querySelectorAll("textarea").forEach(el => {
+    const classes = el.className.split(" ");
+    classes.forEach(c => {
+      if (c.startsWith("font-")) {
+        const fontVar = getComputedStyle(document.body).getPropertyValue("--" + c);
+        if (fontVar) fonts.add(fontVar.trim().replace(/['"]+/g, "").split(",")[0].trim());
+      }
+    });
+  });
 
   const response = await fetch("/api/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, format, width, height, quality, scale }),
+    body: JSON.stringify({ html, format, width, height, quality, scale, fonts: Array.from(fonts) }),
   });
 
   if (!response.ok) {

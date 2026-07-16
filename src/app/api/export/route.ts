@@ -1,48 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Path to Playwright's bundled Chromium
 const CHROMIUM_PATH = "/opt/ms-playwright/chromium-1223/chrome-linux64/chrome";
 
 interface ExportRequest {
-  url: string;
-  format: "pdf" | "png" | "jpeg" | "webp";
+  html: string;
+  format: "pdf" | "png" | "jpeg";
   width: number;
   height: number;
   quality?: number;
   scale?: number;
+  fonts?: string[];
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ExportRequest = await request.json();
-    const {
-      url,
-      format,
-      width,
-      height,
-      quality = 95,
-      scale = 3,
-    } = body;
+    const { html, format, width, height, quality = 95, scale = 3, fonts = [] } = body;
 
-    if (!url || !format || !width || !height) {
+    if (!html || !format || !width || !height) {
       return NextResponse.json(
-        { error: "Missing required fields: url, format, width, height" },
+        { error: "Missing required fields: html, format, width, height" },
         { status: 400 }
       );
     }
 
-    // Dynamic import to avoid bundling issues
     const { chromium } = await import("playwright");
-
     const browser = await chromium.launch({
       executablePath: CHROMIUM_PATH,
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     });
 
     try {
@@ -52,14 +38,47 @@ export async function POST(request: NextRequest) {
       });
       const page = await context.newPage();
 
-      await page.goto(url, {
-        waitUntil: "networkidle",
-        timeout: 30000,
-      });
+      // Build full HTML with fonts and styles
+      const fontLinks = fonts.map(f => `<link href="https://fonts.googleapis.com/css2?family=${f.replace(/_/g, "+")}:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`).join("\n");
 
-      // Wait for fonts to load
+      const fullHTML = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    width: ${width}px; 
+    overflow: hidden;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .slide-page {
+    width: ${width}px;
+    height: ${height}px;
+    overflow: hidden;
+    position: relative;
+    page-break-after: always;
+  }
+  .slide-page:last-child {
+    page-break-after: auto;
+  }
+  textarea {
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    overflow: hidden;
+  }
+  ${fontLinks}
+</style>
+</head>
+<body>${html}</body>
+</html>`;
+
+      await page.setContent(fullHTML, { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(500);
 
       if (format === "pdf") {
         const pdf = await page.pdf({
@@ -67,7 +86,6 @@ export async function POST(request: NextRequest) {
           height: `${height}px`,
           printBackground: true,
           margin: { top: 0, right: 0, bottom: 0, left: 0 },
-          preferCSSPageSize: false,
         });
 
         return new NextResponse(pdf, {
@@ -83,17 +101,10 @@ export async function POST(request: NextRequest) {
           fullPage: true,
         });
 
-        const mimeType =
-          format === "jpeg"
-            ? "image/jpeg"
-            : format === "webp"
-            ? "image/webp"
-            : "image/png";
-
         return new NextResponse(screenshot, {
           headers: {
-            "Content-Type": mimeType,
-            "Content-Disposition": `attachment; filename="carousel.${format}"`,
+            "Content-Type": format === "jpeg" ? "image/jpeg" : "image/png",
+            "Content-Disposition": `attachment; filename="carousel.${format === "jpeg" ? "jpg" : "png"}`,
           },
         });
       }
