@@ -6,11 +6,20 @@ import { cn } from "@/lib/utils";
 import { Icons } from "@/components/icons";
 import { Button, buttonVariants } from "./ui/button";
 import { EditorMenubar } from "./editor-menubar";
-import { Download, Loader2Icon, Settings } from "lucide-react";
+import { Download, Loader2Icon, Settings, ChevronDown } from "lucide-react";
 import Pager from "./pager";
 import { FilenameForm } from "./forms/filename-form";
 import { BringYourKeysDialog } from "@/components/api-keys-dialog";
 import { StarOnGithub } from "@/components/star-on-github";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { ExportImageFormat } from "@/lib/hooks/use-component-printer";
 
 export type NavItem = {
   title: string;
@@ -23,10 +32,14 @@ export type MainNavItem = NavItem;
 interface MainNavProps {
   handlePrint: () => void;
   isPrinting: boolean;
+  exportAsImages: (format: ExportImageFormat, quality?: number) => Promise<void>;
+  isExporting: boolean;
   className?: string;
 }
 
-export function MainNav({ handlePrint, isPrinting, className }: MainNavProps) {
+export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, className }: MainNavProps) {
+  const isLoading = isPrinting || isExporting;
+
   return (
     <div
       className={cn(
@@ -50,15 +63,48 @@ export function MainNav({ handlePrint, isPrinting, className }: MainNavProps) {
         <div className="hidden md:block">
           <FilenameForm />
         </div>
-        <Button variant="ghost" size={"icon"} onClick={handlePrint}>
-          <div className="flex flex-row gap-1 items-center">
-            {isPrinting ? (
-              <Loader2Icon className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download />
-            )}
-          </div>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1 px-2">
+              {isLoading ? (
+                <Loader2Icon className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Export as PDF</DropdownMenuLabel>
+            <DropdownMenuItem onClick={handlePrint} disabled={isLoading}>
+              <Download className="w-4 h-4 mr-2" />
+              Download PDF
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Export as Images (ZIP)</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => exportAsImages("png")}
+              disabled={isLoading}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              PNG images
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => exportAsImages("webp")}
+              disabled={isLoading}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              WEBP images
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => exportAsImages("jpeg")}
+              disabled={isLoading}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              JPEG images
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <StarOnGithub />
         <Link
           className="block lg:hidden"

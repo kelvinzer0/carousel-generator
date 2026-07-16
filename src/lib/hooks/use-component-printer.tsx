@@ -4,11 +4,21 @@ import { SIZE } from "@/lib/page-size";
 import { useFieldArrayValues } from "@/lib/hooks/use-field-array-values";
 import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
-import { toCanvas } from "html-to-image";
+import { toCanvas, toPng, toJpeg } from "html-to-image";
 import { Options as HtmlToImageOptions } from "html-to-image/lib/types";
 import { jsPDF, jsPDFOptions } from "jspdf";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 // TODO: Create a reusable component and package with this code
+
+export type ExportImageFormat = "png" | "webp" | "jpeg";
+
+const FORMAT_EXT: Record<ExportImageFormat, string> = {
+  png: "png",
+  webp: "webp",
+  jpeg: "jpg",
+};
 
 type HtmlToPdfOptions = {
   margin: [number, number, number, number];
@@ -102,11 +112,45 @@ function canvasToPdf(canvas: HTMLCanvasElement, opt: HtmlToPdfOptions) {
   return pdf;
 }
 
+function getSlideElements(container: HTMLElement): HTMLElement[] {
+  const items = container.querySelectorAll('[id^="carousel-item-"]');
+  return Array.from(items) as HTMLElement[];
+}
+
+async function captureSlideToDataUrl(
+  slideElement: HTMLElement,
+  format: ExportImageFormat,
+  quality: number
+): Promise<string> {
+  const SCALE = 1.8;
+  const options: HtmlToImageOptions = {
+    width: SIZE.width,
+    height: SIZE.height,
+    canvasWidth: SIZE.width * SCALE,
+    canvasHeight: SIZE.height * SCALE,
+    style: {
+      margin: "0",
+      padding: "0",
+    },
+  };
+
+  if (format === "png") {
+    return toPng(slideElement, options);
+  } else if (format === "webp") {
+    // html-to-image doesn't export toWebp, use canvas fallback
+    const canvas = await toCanvas(slideElement, options);
+    return canvas.toDataURL("image/webp", quality);
+  } else {
+    return toJpeg(slideElement, { ...options, quality });
+  }
+}
+
 export function useComponentPrinter() {
   const { numPages } = useFieldArrayValues("slides");
   const { watch }: DocumentFormReturn = useFormContext();
 
   const [isPrinting, setIsPrinting] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
   // TODO: Show animation on loading
   const componentRef = React.useRef(null);
 
@@ -192,10 +236,58 @@ export function useComponentPrinter() {
     },
   });
 
+  const exportAsImages = React.useCallback(
+    async (format: ExportImageFormat, quality: number = 0.95) => {
+      const container = document.getElementById("element-to-download-as-pdf");
+      if (!container) {
+        console.error("Container element not found");
+        return;
+      }
+
+      setIsExporting(true);
+      try {
+        const slideElements = getSlideElements(container);
+        if (slideElements.length === 0) {
+          console.error("No slides found");
+          return;
+        }
+
+        const zip = new JSZip();
+        const filename = watch("filename") || "carousel";
+
+        for (let i = 0; i < slideElements.length; i++) {
+          const slideEl = slideElements[i];
+          // Get the page content inside the carousel item
+          const pageContent = slideEl.querySelector(
+            "[id^='page-base-']"
+          ) as HTMLElement;
+          if (!pageContent) continue;
+
+          const dataUrl = await captureSlideToDataUrl(pageContent, format, quality);
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const ext = FORMAT_EXT[format];
+          const paddedIndex = String(i + 1).padStart(2, "0");
+          zip.file(`${filename}-${paddedIndex}.${ext}`, blob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        saveAs(zipBlob, `${filename}.zip`);
+      } catch (err) {
+        console.error("Export failed:", err);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [watch, numPages]
+  );
+
   return {
     componentRef,
     handlePrint,
     isPrinting,
+    exportAsImages,
+    isExporting,
   };
 }
 
