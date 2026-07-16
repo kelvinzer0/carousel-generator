@@ -11,6 +11,7 @@ import {
   StyleFieldPath,
   TextTextFieldPath,
 } from "@/lib/document-form-types";
+import { getTextStyleCSS } from "@/lib/text-style-css";
 
 export function Description({
   fieldName,
@@ -27,6 +28,9 @@ export function Description({
   ) as TextFieldStyle;
   const textFieldName = (fieldName + ".text") as TextTextFieldPath;
 
+  const secondaryStyle = config.theme.secondaryStyle;
+  const hasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
+
   return (
     <TextAreaFormField
       fieldName={textFieldName}
@@ -42,9 +46,11 @@ export function Description({
         fontIdToClassName(config.fonts.font2),
         className
       )}
-      style={{
-        color: config.theme.secondary,
-      }}
+      style={
+        hasGradientTexture
+          ? getTextStyleCSS(secondaryStyle)
+          : { color: config.theme.secondary }
+      }
     />
   );
 }

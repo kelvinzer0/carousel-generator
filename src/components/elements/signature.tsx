@@ -3,6 +3,7 @@ import { ConfigSchema, DocumentSchema } from "@/lib/validation/document-schema";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { fontIdToClassName } from "@/lib/fonts-map";
+import { getTextStyleCSS } from "@/lib/text-style-css";
 
 export function Signature({
   config,
@@ -11,6 +12,11 @@ export function Signature({
   config: z.infer<typeof ConfigSchema>;
   className?: string;
 }) {
+  const primaryStyle = config.theme.primaryStyle;
+  const secondaryStyle = config.theme.secondaryStyle;
+  const primaryHasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
+  const secondaryHasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
+
   return (
     <div
       className={`flex justify-start flex-row gap-3 items-center ${cn(
@@ -31,9 +37,11 @@ export function Signature({
       <div className={`flex items-start flex-col`}>
         <p
           className={cn(`text-base`, fontIdToClassName(config.fonts.font2))}
-          style={{
-            color: config.theme.primary,
-          }}
+          style={
+            primaryHasGradientTexture
+              ? getTextStyleCSS(primaryStyle)
+              : { color: config.theme.primary }
+          }
         >
           {config.brand.name}
         </p>
@@ -42,9 +50,11 @@ export function Signature({
             `text-sm font-normal`,
             fontIdToClassName(config.fonts.font2)
           )}
-          style={{
-            color: config.theme.secondary,
-          }}
+          style={
+            secondaryHasGradientTexture
+              ? getTextStyleCSS(secondaryStyle)
+              : { color: config.theme.secondary }
+          }
         >
           {config.brand.handle}
         </p>

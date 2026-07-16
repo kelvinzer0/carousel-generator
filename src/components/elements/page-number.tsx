@@ -3,6 +3,7 @@ import { ConfigSchema } from "@/lib/validation/document-schema";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { fontIdToClassName } from "@/lib/fonts-map";
+import { getTextStyleCSS } from "@/lib/text-style-css";
 
 export function PageNumber({
   config,
@@ -13,14 +14,18 @@ export function PageNumber({
   number: number;
   className?: string;
 }) {
-  // TODO: Use the view to optionally add a circle around it
+  const primaryStyle = config.theme.primaryStyle;
+  const hasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
+
   return (
     <div className={`flex flex-row gap-3 items-center ${cn(className)}`}>
       <p
         className={cn(`text-xl`, fontIdToClassName(config.fonts.font2))}
-        style={{
-          color: config.theme.primary,
-        }}
+        style={
+          hasGradientTexture
+            ? getTextStyleCSS(primaryStyle)
+            : { color: config.theme.primary }
+        }
       >
         {number}
       </p>

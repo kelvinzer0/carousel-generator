@@ -10,6 +10,7 @@ import {
   TextTextFieldPath,
 } from "@/lib/document-form-types";
 import { TextAreaFormField } from "@/components/forms/fields/text-area-form-field";
+import { getTextStyleCSS } from "@/lib/text-style-css";
 
 export function Subtitle({
   fieldName,
@@ -26,6 +27,9 @@ export function Subtitle({
   ) as TextFieldStyle;
   const textFieldName = (fieldName + ".text") as TextTextFieldPath;
 
+  const secondaryStyle = config.theme.secondaryStyle;
+  const hasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
+
   return (
     <TextAreaFormField
       fieldName={textFieldName}
@@ -41,9 +45,11 @@ export function Subtitle({
         fontIdToClassName(config.fonts.font1),
         className
       )}
-      style={{
-        color: config.theme.secondary,
-      }}
+      style={
+        hasGradientTexture
+          ? getTextStyleCSS(secondaryStyle)
+          : { color: config.theme.secondary }
+      }
     />
   );
 }

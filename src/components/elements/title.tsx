@@ -14,6 +14,7 @@ import {
   TextTextFieldPath,
 } from "@/lib/document-form-types";
 import { TextAreaFormField } from "@/components/forms/fields/text-area-form-field";
+import { getTextStyleCSS } from "@/lib/text-style-css";
 
 export function Title({
   fieldName,
@@ -29,6 +30,10 @@ export function Title({
     `${fieldName}.style` as StyleFieldPath
   ) as TextFieldStyle;
   const textFieldName = (fieldName + ".text") as TextTextFieldPath;
+
+  const primaryStyle = config.theme.primaryStyle;
+  const hasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
+
   return (
     <TextAreaFormField
       fieldName={textFieldName}
@@ -36,7 +41,6 @@ export function Title({
       label={""}
       placeholder={"Your title here"}
       className={cn(
-        // text-balance has some issues with text area
         `font-black `,
         textStyleToClasses({
           style: style,
@@ -45,9 +49,11 @@ export function Title({
         fontIdToClassName(config.fonts.font1),
         className
       )}
-      style={{
-        color: config.theme.primary,
-      }}
+      style={
+        hasGradientTexture
+          ? getTextStyleCSS(primaryStyle)
+          : { color: config.theme.primary }
+      }
     />
   );
 }
