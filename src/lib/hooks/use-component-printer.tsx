@@ -19,8 +19,8 @@ const FORMAT_EXT: Record<ExportImageFormat, string> = {
 };
 
 // High quality scale factors
-const EXPORT_SCALE = 3; // 3x for high quality print (300 DPI equivalent)
-const IMAGE_EXPORT_SCALE = 4; // 4x for image exports
+const EXPORT_SCALE = 3;
+const IMAGE_EXPORT_SCALE = 4;
 
 type HtmlToPdfOptions = {
   margin: [number, number, number, number];
@@ -104,11 +104,6 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
   return Array.from(items) as HTMLElement[];
 }
 
-/**
- * Flatten gradient/texture text to solid colors for export.
- * html-to-image doesn't support background-clip: text in SVG foreignObject.
- * Returns modified elements for restoration.
- */
 function flattenGradientText(container: HTMLElement) {
   const elements = container.querySelectorAll("*");
   const modified: { el: HTMLElement; origStyle: string }[] = [];
@@ -129,7 +124,6 @@ function flattenGradientText(container: HTMLElement) {
       const bgImage = computed.backgroundImage;
       let fallbackColor = computed.color || "#000000";
 
-      // Extract first color from gradient
       const colorMatch = bgImage.match(
         /rgb[a]?\([^)]+\)|#[0-9a-fA-F]{3,8}|oklch\([^)]+\)/
       );
@@ -156,10 +150,6 @@ function restoreGradientText(
   });
 }
 
-/**
- * Embed font-face declarations into the element for export.
- * This ensures fonts are available when rendering to canvas.
- */
 function embedFontStyles(doc: Document, element: HTMLElement) {
   const styleSheets = Array.from(doc.styleSheets);
   let fontCSS = "";
@@ -184,9 +174,6 @@ function embedFontStyles(doc: Document, element: HTMLElement) {
   }
 }
 
-/**
- * Capture a slide element to a data URL with high quality settings.
- */
 async function captureSlideToDataUrl(
   slideElement: HTMLElement,
   format: ExportImageFormat,
@@ -203,7 +190,6 @@ async function captureSlideToDataUrl(
       margin: "0",
       padding: "0",
     },
-    // Cache busting for fonts
     cacheBust: true,
   };
 
@@ -221,6 +207,32 @@ async function captureSlideToDataUrl(
   } finally {
     restoreGradientText(modified);
   }
+}
+
+/**
+ * Server-side export using Playwright (high quality, consistent rendering)
+ */
+async function serverSideExport(
+  format: "pdf" | ExportImageFormat,
+  width: number,
+  height: number,
+  quality: number = 95,
+  scale: number = 3
+): Promise<Blob> {
+  const url = window.location.href;
+
+  const response = await fetch("/api/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, format, width, height, quality, scale }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Export failed" }));
+    throw new Error(error.details || error.error || "Export failed");
+  }
+
+  return response.blob();
 }
 
 export function useComponentPrinter() {
@@ -242,7 +254,6 @@ export function useComponentPrinter() {
       // @ts-ignore
       const clone = current.cloneNode(true);
 
-      // Clean up the clone for export
       proxyImgSources(clone);
       removeSelectionStyleById(clone, "page-base-");
       removeSelectionStyleById(clone, "content-image-");
@@ -253,7 +264,6 @@ export function useComponentPrinter() {
       removeAllById(clone, "element-menubar-");
       removeAllById(clone, "slide-menubar-");
 
-      // Embed fonts for proper rendering
       embedFontStyles(document, clone);
       insertFonts(clone);
 
@@ -321,6 +331,50 @@ export function useComponentPrinter() {
     },
   });
 
+  /**
+   * High-quality server-side PDF export using Playwright
+   */
+  const handlePrintHQ = React.useCallback(async () => {
+    setIsPrinting(true);
+    try {
+      const blob = await serverSideExport("pdf", SIZE.width, SIZE.height);
+      const filename = watch("filename") || "carousel";
+      saveAs(blob, `${filename}.pdf`);
+    } catch (err) {
+      console.error("Server-side PDF export failed, falling back to client:", err);
+      // Fallback to client-side
+      handlePrint();
+    } finally {
+      setIsPrinting(false);
+    }
+  }, [SIZE, watch, handlePrint]);
+
+  /**
+   * High-quality server-side image export using Playwright
+   */
+  const exportAsImagesHQ = React.useCallback(
+    async (format: ExportImageFormat, quality: number = 95) => {
+      setIsExporting(true);
+      try {
+        const blob = await serverSideExport(
+          format,
+          SIZE.width,
+          SIZE.height * numPages,
+          quality
+        );
+        const filename = watch("filename") || "carousel";
+        saveAs(blob, `${filename}.${FORMAT_EXT[format]}`);
+      } catch (err) {
+        console.error("Server-side export failed, falling back to client:", err);
+        // Fallback to client-side
+        await exportAsImages(format, quality);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [SIZE, numPages, watch]
+  );
+
   const exportAsImages = React.useCallback(
     async (format: ExportImageFormat, quality: number = 0.95) => {
       const container = document.getElementById("element-to-download-as-pdf");
@@ -373,8 +427,10 @@ export function useComponentPrinter() {
   return {
     componentRef,
     handlePrint,
+    handlePrintHQ,
     isPrinting,
     exportAsImages,
+    exportAsImagesHQ,
     isExporting,
   };
 }
