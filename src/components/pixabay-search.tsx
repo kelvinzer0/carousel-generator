@@ -69,9 +69,7 @@ export function PixabaySearch({ onSelect, className }: PixabaySearchProps) {
     }
   }, []);
 
-  const handleSearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleSearch = useCallback(() => {
     if (query.trim()) {
       searchImages(query, 1);
     }
@@ -103,22 +101,23 @@ export function PixabaySearch({ onSelect, className }: PixabaySearchProps) {
 
   return (
     <div className={cn("space-y-3", className)}>
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <div className="flex gap-2">
         <Input
           type="text"
           placeholder="Search Pixabay images..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1"
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); }}}
         />
-        <Button type="submit" disabled={loading || !query.trim()}>
+        <Button type="button" disabled={loading || !query.trim()} onClick={handleSearch}>
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Search className="w-4 h-4" />
           )}
         </Button>
-      </form>
+      </div>
 
       {error && (
         <div className="text-sm text-destructive p-2 bg-destructive/10 rounded">
