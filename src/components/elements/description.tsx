@@ -32,6 +32,15 @@ export function Description({
   const secondaryStyle = config.theme.secondaryStyle;
   const hasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
 
+  const plainStyle: React.CSSProperties = {
+    fontFamily,
+    ...(hasGradientTexture ? {} : { color: config.theme.secondary }),
+  };
+
+  const gradientStyle: React.CSSProperties | undefined = hasGradientTexture
+    ? { ...getTextStyleCSS(secondaryStyle), fontFamily }
+    : undefined;
+
   return (
     <TextAreaFormField
       fieldName={textFieldName}
@@ -46,12 +55,8 @@ export function Description({
         }),
         className
       )}
-      style={{
-        fontFamily,
-        ...(hasGradientTexture
-          ? getTextStyleCSS(secondaryStyle)
-          : { color: config.theme.secondary }),
-      }}
+      style={plainStyle}
+      gradientStyle={gradientStyle}
     />
   );
 }

@@ -35,6 +35,15 @@ export function Title({
   const primaryStyle = config.theme.primaryStyle;
   const hasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
 
+  const plainStyle: React.CSSProperties = {
+    fontFamily,
+    ...(hasGradientTexture ? {} : { color: config.theme.primary }),
+  };
+
+  const gradientStyle: React.CSSProperties | undefined = hasGradientTexture
+    ? { ...getTextStyleCSS(primaryStyle), fontFamily }
+    : undefined;
+
   return (
     <TextAreaFormField
       fieldName={textFieldName}
@@ -42,19 +51,15 @@ export function Title({
       label={""}
       placeholder={"Your title here"}
       className={cn(
-        `font-black `,
+        `font-black`,
         textStyleToClasses({
           style: style,
           sizes: ["text-7xl", "text-5xl", "text-3xl"],
         }),
         className
       )}
-      style={{
-        fontFamily,
-        ...(hasGradientTexture
-          ? getTextStyleCSS(primaryStyle)
-          : { color: config.theme.primary }),
-      }}
+      style={plainStyle}
+      gradientStyle={gradientStyle}
     />
   );
 }

@@ -1,3 +1,4 @@
+import React from "react";
 import { cn } from "@/lib/utils";
 import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { textStyleToClasses } from "@/lib/text-style-to-classes";
@@ -31,6 +32,15 @@ export function Subtitle({
   const secondaryStyle = config.theme.secondaryStyle;
   const hasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
 
+  const plainStyle: React.CSSProperties = {
+    fontFamily,
+    ...(hasGradientTexture ? {} : { color: config.theme.secondary }),
+  };
+
+  const gradientStyle: React.CSSProperties | undefined = hasGradientTexture
+    ? { ...getTextStyleCSS(secondaryStyle), fontFamily }
+    : undefined;
+
   return (
     <TextAreaFormField
       fieldName={textFieldName}
@@ -45,12 +55,8 @@ export function Subtitle({
         }),
         className
       )}
-      style={{
-        fontFamily,
-        ...(hasGradientTexture
-          ? getTextStyleCSS(secondaryStyle)
-          : { color: config.theme.secondary }),
-      }}
+      style={plainStyle}
+      gradientStyle={gradientStyle}
     />
   );
 }
