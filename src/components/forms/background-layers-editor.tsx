@@ -25,6 +25,7 @@ import { FormLabel } from "@/components/ui/form";
 import { Slider } from "@/components/ui/slider";
 import { DocumentFormReturn } from "@/lib/document-form-types";
 import { BackgroundLayerItemType } from "@/lib/validation/theme-schema";
+import { ImageUploadButton } from "@/components/image-upload-button";
 
 const LAYER_COLORS = [
   "#ff6b6b", "#feca57", "#48dbfb", "#ff9ff3",
@@ -327,28 +328,33 @@ function ImageLayerEditor({
 
   return (
     <div className="space-y-2">
-      <Input
-        value={image.src}
-        onChange={(e) =>
-          onUpdate(index, { image: { ...image, src: e.target.value } })
-        }
-        placeholder="Image URL"
-        className="h-8 text-xs"
-      />
       <div className="flex gap-2">
-        <select
-          value={image.fit}
+        <Input
+          value={image.src}
           onChange={(e) =>
-            onUpdate(index, {
-              image: { ...image, fit: e.target.value as "cover" | "contain" },
-            })
+            onUpdate(index, { image: { ...image, src: e.target.value } })
           }
-          className="flex-1 h-8 rounded-md border border-input bg-transparent px-2 text-xs"
-        >
-          <option value="cover">Cover</option>
-          <option value="contain">Contain</option>
-        </select>
+          placeholder="Image URL"
+          className="flex-1 h-8 text-xs"
+        />
+        <ImageUploadButton
+          onUpload={(dataUrl) =>
+            onUpdate(index, { image: { ...image, src: dataUrl } })
+          }
+        />
       </div>
+      <select
+        value={image.fit}
+        onChange={(e) =>
+          onUpdate(index, {
+            image: { ...image, fit: e.target.value as "cover" | "contain" },
+          })
+        }
+        className="w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs"
+      >
+        <option value="cover">Cover</option>
+        <option value="contain">Contain</option>
+      </select>
       {image.src && (
         <div className="h-16 rounded border overflow-hidden">
           <img
@@ -357,6 +363,15 @@ function ImageLayerEditor({
             className="w-full h-full object-cover"
           />
         </div>
+      )}
+      {!image.src && (
+        <ImageUploadButton
+          variant="dropzone"
+          onUpload={(dataUrl) =>
+            onUpdate(index, { image: { ...image, src: dataUrl } })
+          }
+          className="h-20"
+        />
       )}
     </div>
   );

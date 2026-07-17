@@ -21,6 +21,7 @@ import { Button } from "../ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { Separator } from "../ui/separator";
 import { BackgroundLayersEditor } from "./background-layers-editor";
+import { ImageUploadButton } from "../image-upload-button";
 
 const GRADIENT_PRESETS = [
   { label: "Sunset", direction: "to right", stops: [{ color: "#ff7e5f", position: 0 }, { color: "#feb47b", position: 100 }] },
@@ -274,21 +275,28 @@ function TextStyleEditor({
               />
             ))}
           </div>
-          <FormField
-            control={form.control}
-            name={`${stylePath}.texture.url` as any}
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Input
-                    placeholder="Texture URL"
-                    className="text-xs"
-                    {...field}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          <div className="flex gap-2">
+            <FormField
+              control={form.control}
+              name={`${stylePath}.texture.url` as any}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormControl>
+                    <Input
+                      placeholder="Texture URL"
+                      className="text-xs"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <ImageUploadButton
+              onUpload={(dataUrl) => {
+                setValue(`${stylePath}.texture.url` as any, dataUrl);
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
