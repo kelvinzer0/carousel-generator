@@ -24,6 +24,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { useKeys } from "@/lib/hooks/use-keys";
 import { useKeysContext } from "@/lib/providers/keys-context";
 import { useStatusContext } from "@/lib/providers/editor-status-context";
+import { useAutoPatternPerSlide } from "@/components/forms/background-layers-editor";
 import { generateCarouselSlidesAction } from "@/app/actions";
 
 const FormSchema = z.object({
@@ -53,13 +54,8 @@ export function AIInputForm() {
       `A carousel with about "${data.prompt}"`
     );
 
-    // const generatedSlides = await generateCarouselSlides(
-    //   `A carousel with about "${data.prompt}"`,
-    //   apiKey
-    // );
     if (generatedSlides) {
       setValue("slides", generatedSlides);
-      // TODO Fix toast not working
       toast({
         title: "New carousel generated",
       });

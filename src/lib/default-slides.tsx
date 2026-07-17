@@ -15,21 +15,25 @@ import { SlideType } from "@/lib/validation/slide-schema";
 export const COMMON_PAGE: z.infer<typeof CommonSlideSchema> = {
   elements: [DEFAULT_TITLE, DEFAULT_SUBTITLE, DEFAULT_CONTENT_IMAGE_INPUT],
   backgroundImage: DEFAULT_BACKGROUND_IMAGE_INPUT,
+  backgroundLayers: [],
 };
 
 export const INTRO: z.infer<typeof CommonSlideSchema> = {
   elements: [DEFAULT_TITLE, DEFAULT_CONTENT_IMAGE_INPUT],
   backgroundImage: DEFAULT_BACKGROUND_IMAGE_INPUT,
+  backgroundLayers: [],
 };
 
 export const CONTENT: z.infer<typeof CommonSlideSchema> = {
   elements: [DEFAULT_TITLE, DEFAULT_DESCRIPTION],
   backgroundImage: DEFAULT_BACKGROUND_IMAGE_INPUT,
+  backgroundLayers: [],
 };
 
 export const OUTRO: z.infer<typeof CommonSlideSchema> = {
   elements: [DEFAULT_TITLE, DEFAULT_SUBTITLE, DEFAULT_DESCRIPTION],
   backgroundImage: DEFAULT_BACKGROUND_IMAGE_INPUT,
+  backgroundLayers: [],
 };
 
 export function getDefaultSlideOfType(slideType: SlideType) {

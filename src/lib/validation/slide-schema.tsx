@@ -5,6 +5,8 @@ import {
   DEFAULT_CONTENT_IMAGE_INPUT,
   ImageSchema,
 } from "./image-schema";
+import { BackgroundLayersSchema } from "./theme-schema";
+
 import {
   TitleSchema,
   SubtitleSchema,
@@ -39,6 +41,7 @@ export const UnstyledSlideSchema = z.object({
 export const CommonSlideSchema = z.object({
   elements: z.array(ElementSchema).default([]),
   backgroundImage: ImageSchema.default(DEFAULT_BACKGROUND_IMAGE_INPUT),
+  backgroundLayers: BackgroundLayersSchema.optional(),
 });
 
 export const UnstyledMultiSlideSchema = z.array(UnstyledSlideSchema);

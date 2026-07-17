@@ -70,7 +70,7 @@ export function CommonPage({
     <PageBase size={size} fieldName={backgroundImageField}>
       {/* Background layers container */}
       <div className="absolute inset-0" style={{ zIndex: 0 }}>
-        {/* Background layers (new system) — last in array = top layer */}
+        {/* Global background layers (theme-level) */}
         {config.theme.backgroundLayers && config.theme.backgroundLayers.length > 0 ? (
           config.theme.backgroundLayers.map((layer, i) => (
             <BackgroundLayerRenderer
@@ -82,6 +82,16 @@ export function CommonPage({
         ) : (
           /* Legacy background color fallback — only when no layers */
           <BackgroundLayer background={config.theme.background} />
+        )}
+        {/* Slide-level background layers (overrides global) */}
+        {slide.backgroundLayers && slide.backgroundLayers.length > 0 && (
+          slide.backgroundLayers.map((layer, i) => (
+            <BackgroundLayerRenderer
+              key={layer.id}
+              layer={layer}
+              style={{ zIndex: 100 + i }}
+            />
+          ))
         )}
       </div>
 

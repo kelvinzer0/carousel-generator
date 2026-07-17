@@ -434,7 +434,7 @@ function GradientLayerEditor({
 // ── Auto-Pattern from Slide Text ────────────────────────────────
 
 /**
- * Scan all slide texts for emoji and auto-create pattern layers.
+ * Scan all slide texts for emoji and auto-create GLOBAL pattern layer.
  */
 export function useAutoPattern() {
   const form: DocumentFormReturn = useFormContext();
@@ -443,7 +443,6 @@ export function useAutoPattern() {
     const slides = form.getValues("slides") || [];
     const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
 
-    // Collect all emoji from all slides
     let allEmoji: string[] = [];
     slides.forEach((slide: any) => {
       if (slide.elements) {
@@ -458,26 +457,24 @@ export function useAutoPattern() {
     const uniqueEmoji = [...new Set(allEmoji)];
     if (uniqueEmoji.length === 0) return;
 
-    // Map to FA icons
     const icons = uniqueEmoji
       .map(mapEmojiToFontAwesome)
       .filter((m): m is EmojiMapping => m !== null);
 
     if (icons.length === 0) return;
 
-    // Check if pattern layer already exists
     const existingPattern = currentLayers.find(
       (l: any) => l.type === "pattern"
     );
 
     const newPattern: BackgroundLayerItemType = {
-      id: existingPattern?.id || `pattern-auto-${Date.now()}`,
+      id: existingPattern?.id || `pattern-global-${Date.now()}`,
       type: "pattern",
       opacity: 15,
       visible: true,
       pattern: {
         type: "pattern",
-        icons: icons.slice(0, 8), // Max 8 unique icons
+        icons: icons.slice(0, 8),
         color: "#ffffff",
         opacity: 15,
         iconSize: 28,
@@ -487,13 +484,11 @@ export function useAutoPattern() {
     };
 
     if (existingPattern) {
-      // Update existing pattern layer
       const updated = currentLayers.map((l: any) =>
         l.id === existingPattern.id ? newPattern : l
       );
       form.setValue("config.theme.backgroundLayers", updated, { shouldDirty: true });
     } else {
-      // Add new pattern layer at the bottom
       form.setValue(
         "config.theme.backgroundLayers",
         [...currentLayers, newPattern],
@@ -503,6 +498,107 @@ export function useAutoPattern() {
   };
 
   return { generateAutoPattern };
+}
+
+/**
+ * Scan emoji from a SINGLE slide and create per-slide pattern layer.
+ */
+export function useAutoPatternPerSlide(slideIndex: number) {
+  const form: DocumentFormReturn = useFormContext();
+
+  const generatePatternForSlide = async () => {
+    const slide = form.getValues(`slides.${slideIndex}`);
+    const elements = slide?.elements || [];
+    const currentLayers = slide?.backgroundLayers || [];
+
+    let slideEmoji: string[] = [];
+    elements.forEach((el: any) => {
+      if (el.text) {
+        slideEmoji = [...slideEmoji, ...extractEmoji(el.text)];
+      }
+    });
+
+    const uniqueEmoji = [...new Set(slideEmoji)];
+    if (uniqueEmoji.length === 0) return;
+
+    const icons = uniqueEmoji
+      .map(mapEmojiToFontAwesome)
+      .filter((m): m is EmojiMapping => m !== null);
+
+    if (icons.length === 0) return;
+
+    const existingPattern = currentLayers.find(
+      (l: any) => l.type === "pattern"
+    );
+
+    const newPattern: BackgroundLayerItemType = {
+      id: existingPattern?.id || `pattern-slide-${slideIndex}-${Date.now()}`,
+      type: "pattern",
+      opacity: 15,
+      visible: true,
+      pattern: {
+        type: "pattern",
+        icons: icons.slice(0, 8),
+        color: "#ffffff",
+        opacity: 15,
+        iconSize: 28,
+        patternSize: 80,
+        fill: "solid",
+      },
+    };
+
+    if (existingPattern) {
+      const updated = currentLayers.map((l: any) =>
+        l.id === existingPattern.id ? newPattern : l
+      );
+      form.setValue(`slides.${slideIndex}.backgroundLayers`, updated, { shouldDirty: true });
+    } else {
+      form.setValue(
+        `slides.${slideIndex}.backgroundLayers`,
+        [...currentLayers, newPattern],
+        { shouldDirty: true }
+      );
+    }
+  };
+
+  const clearPatternForSlide = () => {
+    form.setValue(`slides.${slideIndex}.backgroundLayers`, [], { shouldDirty: true });
+  };
+
+  return { generatePatternForSlide, clearPatternForSlide };
+}
+
+// ── Per-Slide Pattern Button ────────────────────────────────────
+
+export function SlidePatternButton({ slideIndex }: { slideIndex: number }) {
+  const { generatePatternForSlide, clearPatternForSlide } = useAutoPatternPerSlide(slideIndex);
+  const form: DocumentFormReturn = useFormContext();
+  const slideLayers = form.watch(`slides.${slideIndex}.backgroundLayers`) || [];
+  const hasPattern = slideLayers.some((l: any) => l.type === "pattern");
+
+  return (
+    <div className="flex gap-1">
+      <Button
+        size="sm"
+        variant={hasPattern ? "default" : "outline"}
+        className="h-7 text-xs flex-1"
+        onClick={generatePatternForSlide}
+      >
+        <Wand2 className="w-3 h-3 mr-1" />
+        {hasPattern ? "Update" : "Auto"} Pattern
+      </Button>
+      {hasPattern && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-xs px-2"
+          onClick={clearPatternForSlide}
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
+      )}
+    </div>
+  );
 }
 
 // ── Main Background Layers Editor ───────────────────────────────
