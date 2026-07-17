@@ -22,6 +22,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Separator } from "../ui/separator";
 import { BackgroundLayersEditor } from "./background-layers-editor";
 import { ImageUploadButton } from "../image-upload-button";
+import { PixabaySearch } from "@/components/pixabay-search";
 
 const GRADIENT_PRESETS = [
   { label: "Sunset", direction: "to right", stops: [{ color: "#ff7e5f", position: 0 }, { color: "#feb47b", position: 100 }] },
@@ -275,28 +276,7 @@ function TextStyleEditor({
               />
             ))}
           </div>
-          <div className="flex gap-2">
-            <FormField
-              control={form.control}
-              name={`${stylePath}.texture.url` as any}
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Input
-                      placeholder="Texture URL"
-                      className="text-xs"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <ImageUploadButton
-              onUpload={(dataUrl) => {
-                setValue(`${stylePath}.texture.url` as any, dataUrl);
-              }}
-            />
-          </div>
+          <TextureInput stylePath={stylePath} form={form} setValue={setValue} />
         </div>
       )}
     </div>
@@ -366,6 +346,38 @@ function CustomColors({ form }: { form: DocumentFormReturn }) {
       />
       <BackgroundLayersEditor />
     </>
+  );
+}
+
+function TextureInput({ stylePath, form, setValue }: { stylePath: string; form: DocumentFormReturn; setValue: any }) {
+  const [tab, setTab] = useState<"url" | "upload" | "pixabay">("url");
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1">
+        <Button size="sm" variant={tab === "url" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => setTab("url")}>URL</Button>
+        <Button size="sm" variant={tab === "upload" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => setTab("upload")}>Upload</Button>
+        <Button size="sm" variant={tab === "pixabay" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => setTab("pixabay")}>Pixabay</Button>
+      </div>
+      {tab === "url" && (
+        <FormField
+          control={form.control}
+          name={`${stylePath}.texture.url` as any}
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Input placeholder="Texture URL" className="text-xs" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
+      {tab === "upload" && (
+        <ImageUploadButton onUpload={(dataUrl) => setValue(`${stylePath}.texture.url` as any, dataUrl)} />
+      )}
+      {tab === "pixabay" && (
+        <PixabaySearch onSelect={(url) => setValue(`${stylePath}.texture.url` as any, url)} />
+      )}
+    </div>
   );
 }
 

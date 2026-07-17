@@ -30,6 +30,9 @@ import {
   Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PixabaySearch } from "@/components/pixabay-search";
+import { convertFileToDataUrl } from "@/lib/convert-file";
+import imageCompression from "browser-image-compression";
 import {
   extractEmoji,
   mapEmojiToFontAwesome,
@@ -601,6 +604,85 @@ export function SlidePatternButton({ slideIndex }: { slideIndex: number }) {
   );
 }
 
+// ── Image Layer Editor ──────────────────────────────────────────
+
+function ImageLayerEditor({
+  layer,
+  index,
+  onUpdate,
+}: {
+  layer: BackgroundLayerItemType;
+  index: number;
+  onUpdate: (index: number, updates: Partial<BackgroundLayerItemType>) => void;
+}) {
+  const [tab, setTab] = useState<"url" | "upload" | "pixabay">("url");
+  const image = layer.image || { src: "", fit: "cover" as const };
+
+  const updateImage = (updates: Partial<{ src: string; fit: "cover" | "contain" }>) => {
+    onUpdate(index, { image: { ...image, ...updates } });
+  };
+
+  return (
+    <div className="space-y-2 mt-2">
+      {/* Tab buttons */}
+      <div className="flex gap-1">
+        <Button size="sm" variant={tab === "url" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => setTab("url")}>URL</Button>
+        <Button size="sm" variant={tab === "upload" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => setTab("upload")}>Upload</Button>
+        <Button size="sm" variant={tab === "pixabay" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => setTab("pixabay")}>Pixabay</Button>
+      </div>
+
+      {/* URL input */}
+      {tab === "url" && (
+        <div className="flex gap-1">
+          <Input
+            placeholder="Image URL"
+            className="h-8 text-xs flex-1"
+            value={image.src}
+            onChange={(e) => updateImage({ src: e.target.value })}
+          />
+        </div>
+      )}
+
+      {/* Upload */}
+      {tab === "upload" && (
+        <Input
+          accept=".jpg, .jpeg, .png, .svg, .webp"
+          type="file"
+          className="h-8 text-xs"
+          onChange={async (e) => {
+            const file = e.target?.files ? e.target?.files[0] : null;
+            if (file) {
+              const compressedFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 800 });
+              const dataUrl = await convertFileToDataUrl(compressedFile);
+              updateImage({ src: dataUrl });
+            }
+          }}
+        />
+      )}
+
+      {/* Pixabay */}
+      {tab === "pixabay" && (
+        <PixabaySearch onSelect={(url) => updateImage({ src: url })} />
+      )}
+
+      {/* Fit mode */}
+      {image.src && (
+        <div className="flex gap-1">
+          <Button size="sm" variant={image.fit === "cover" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => updateImage({ fit: "cover" })}>Cover</Button>
+          <Button size="sm" variant={image.fit === "contain" ? "default" : "outline"} className="h-7 flex-1 text-xs" onClick={() => updateImage({ fit: "contain" })}>Contain</Button>
+        </div>
+      )}
+
+      {/* Preview */}
+      {image.src && (
+        <div className="w-full h-16 rounded border overflow-hidden">
+          <img src={image.src} alt="" className="w-full h-full" style={{ objectFit: image.fit || "cover" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Background Layers Editor ───────────────────────────────
 
 export function BackgroundLayersEditor() {
@@ -803,9 +885,7 @@ export function BackgroundLayersEditor() {
             )}
 
             {layer.type === "image" && (
-              <div className="text-xs text-muted-foreground">
-                Image: {layer.image?.src ? "Set" : "Not set"}
-              </div>
+              <ImageLayerEditor layer={layer} index={index} onUpdate={updateLayer} />
             )}
           </div>
         ))}
