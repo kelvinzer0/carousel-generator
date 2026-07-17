@@ -211,14 +211,14 @@ export function useComponentPrinter() {
         console.log("Capturing slide", i, "size:", pageContent.offsetWidth, "x", pageContent.offsetHeight);
         const dataUrl = await captureSlideToDataUrl(
           pageContent,
-          "png",
-          1.0,
+          "jpeg",
+          0.95,
           IMAGE_EXPORT_SCALE
         );
         console.log("Slide", i, "captured, dataUrl length:", dataUrl.length);
 
         if (i > 0) pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, 0, SIZE.width, SIZE.height);
+        pdf.addImage(dataUrl, "JPEG", 0, 0, SIZE.width, SIZE.height);
       }
 
       const filename = watch("filename") || "carousel";
