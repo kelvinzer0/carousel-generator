@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Icons } from "@/components/icons";
 import { Button, buttonVariants } from "./ui/button";
 import { EditorMenubar } from "./editor-menubar";
-import { Download, Loader2Icon, Settings, ChevronDown } from "lucide-react";
+import { Download, Loader2Icon, Upload, ChevronDown } from "lucide-react";
 import Pager from "./pager";
 import { FilenameForm } from "./forms/filename-form";
 import { BringYourKeysDialog } from "@/components/api-keys-dialog";
@@ -20,6 +20,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ExportImageFormat } from "@/lib/hooks/use-component-printer";
+import { RemixPostUploadResult } from "@/lib/remixpost-upload";
 
 export type NavItem = {
   title: string;
@@ -34,11 +35,45 @@ interface MainNavProps {
   isPrinting: boolean;
   exportAsImages: (format: ExportImageFormat, quality?: number) => Promise<void>;
   isExporting: boolean;
+  uploadPdf: () => Promise<RemixPostUploadResult>;
+  uploadImages: (format: ExportImageFormat) => Promise<RemixPostUploadResult[]>;
+  isUploading: boolean;
   className?: string;
 }
 
-export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, className }: MainNavProps) {
-  const isLoading = isPrinting || isExporting;
+export function MainNav({
+  handlePrint,
+  isPrinting,
+  exportAsImages,
+  isExporting,
+  uploadPdf,
+  uploadImages,
+  isUploading,
+  className,
+}: MainNavProps) {
+  const isLoading = isPrinting || isExporting || isUploading;
+
+  const handleUploadPdf = async () => {
+    const result = await uploadPdf();
+    if (result.success) {
+      alert("✅ PDF uploaded to RemixPost!");
+    } else {
+      alert(`❌ Upload failed: ${result.error}`);
+    }
+  };
+
+  const handleUploadImages = async (format: ExportImageFormat) => {
+    const results = await uploadImages(format);
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success);
+    if (failed.length === 0) {
+      alert(`✅ ${succeeded} ${format.toUpperCase()} images uploaded to RemixPost!`);
+    } else {
+      alert(
+        `⚠️ ${succeeded} succeeded, ${failed.length} failed.\n${failed.map((r) => r.error).join("\n")}`
+      );
+    }
+  };
 
   return (
     <div
@@ -63,6 +98,8 @@ export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, 
         <div className="hidden lg:block">
           <FilenameForm />
         </div>
+
+        {/* ── Download Dropdown ──────────────────────────── */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-1 px-2">
@@ -75,13 +112,13 @@ export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Export as PDF</DropdownMenuLabel>
+            <DropdownMenuLabel>Download PDF</DropdownMenuLabel>
             <DropdownMenuItem onClick={handlePrint} disabled={isLoading}>
               <Download className="w-4 h-4 mr-2" />
               Download PDF
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Export as Images (ZIP)</DropdownMenuLabel>
+            <DropdownMenuLabel>Download Images (ZIP)</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => exportAsImages("png")}
               disabled={isLoading}
@@ -105,6 +142,52 @@ export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, 
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* ── Upload to RemixPost Dropdown ───────────────── */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1 px-2">
+              {isUploading ? (
+                <Loader2Icon className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline text-xs">RemixPost</span>
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Upload PDF</DropdownMenuLabel>
+            <DropdownMenuItem onClick={handleUploadPdf} disabled={isLoading}>
+              <Upload className="w-4 h-4 mr-2" />
+              Upload PDF
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Upload Images</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => handleUploadImages("png")}
+              disabled={isLoading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload PNGs
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleUploadImages("webp")}
+              disabled={isLoading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload WEBPs
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleUploadImages("jpeg")}
+              disabled={isLoading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload JPEGs
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <StarOnGithub />
         <Link
           className="block lg:hidden"
@@ -124,16 +207,6 @@ export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, 
             <span className="sr-only">GitHub</span>
           </div>
         </Link>
-        {/* // TODO: Re-enable your own keys system  */}
-        {/* <BringYourKeysDialog
-          triggerButton={
-            <Button variant="ghost" size={"icon"}>
-              <div className="flex flex-row gap-1 items-center">
-                <Settings />
-              </div>
-            </Button>
-          }
-        /> */}
       </div>
     </div>
   );
