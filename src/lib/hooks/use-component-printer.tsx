@@ -190,10 +190,12 @@ export function useComponentPrinter() {
 
     setIsPrinting(true);
     try {
+      console.log("PDF export started, slides:", slideElements.length);
+      console.log("SIZE:", SIZE);
+
       const pdf = new jsPDF({
         unit: "px",
         format: [SIZE.width, SIZE.height],
-        orientation: SIZE.width > SIZE.height ? "landscape" : "portrait",
       });
 
       for (let i = 0; i < slideElements.length; i++) {
@@ -201,20 +203,28 @@ export function useComponentPrinter() {
         const pageContent = slideEl.querySelector(
           "[id^='page-base-']"
         ) as HTMLElement;
-        if (!pageContent) continue;
+        if (!pageContent) {
+          console.warn("No page-content found for slide", i);
+          continue;
+        }
 
+        console.log("Capturing slide", i, "size:", pageContent.offsetWidth, "x", pageContent.offsetHeight);
         const dataUrl = await captureSlideToDataUrl(
           pageContent,
           "png",
           1.0,
           IMAGE_EXPORT_SCALE
         );
+        console.log("Slide", i, "captured, dataUrl length:", dataUrl.length);
 
         if (i > 0) pdf.addPage();
         pdf.addImage(dataUrl, "PNG", 0, 0, SIZE.width, SIZE.height);
       }
 
-      pdf.save(watch("filename"));
+      const filename = watch("filename") || "carousel";
+      console.log("Saving PDF as:", filename);
+      pdf.save(filename);
+      console.log("PDF saved successfully");
     } catch (err) {
       console.error("PDF export failed:", err);
     } finally {

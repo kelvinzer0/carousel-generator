@@ -30,7 +30,7 @@ export type NavItem = {
 export type MainNavItem = NavItem;
 
 interface MainNavProps {
-  handlePrint: () => void;
+  handlePrint: () => void | Promise<void>;
   isPrinting: boolean;
   exportAsImages: (format: ExportImageFormat, quality?: number) => Promise<void>;
   isExporting: boolean;
