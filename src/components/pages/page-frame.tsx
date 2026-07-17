@@ -20,7 +20,8 @@ export function PageFrame({
 
   return (
     <div
-      className={cn("flex flex-col h-full w-full", className)}
+      className={cn("flex flex-col h-full w-full relative", className)}
+      style={{ zIndex: 10 }}
       onClick={(event) => {
         setCurrentPage(pageNumber);
         setCurrentSelection(fieldName, event);
