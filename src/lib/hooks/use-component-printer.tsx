@@ -1,5 +1,4 @@
 import React from "react";
-import { useReactToPrint } from "react-to-print";
 import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 import { useFieldArrayValues } from "@/lib/hooks/use-field-array-values";
 import { useFormContext } from "react-hook-form";
@@ -173,29 +172,24 @@ export function useComponentPrinter() {
 
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
-  // Direct ref — no clone needed since PDF capture is per-slide
+  // Direct ref for slides container
   const componentRef = React.useRef(null);
 
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    removeAfterPrint: true,
-    onBeforePrint: () => setIsPrinting(true),
-    onAfterPrint: () => setIsPrinting(false),
-    pageStyle: `@page { size: ${SIZE.width}px ${SIZE.height}px; margin: 0; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`,
-    print: async (printIframe) => {
-      const container = document.getElementById("element-to-download-as-pdf");
-      if (!container) {
-        console.error("Container element not found");
-        return;
-      }
+  const handlePrint = React.useCallback(async () => {
+    const container = document.getElementById("element-to-download-as-pdf");
+    if (!container) {
+      console.error("Container element not found");
+      return;
+    }
 
-      const slideElements = getSlideElements(container);
-      if (slideElements.length === 0) {
-        console.error("No slides found");
-        return;
-      }
+    const slideElements = getSlideElements(container);
+    if (slideElements.length === 0) {
+      console.error("No slides found");
+      return;
+    }
 
-      // Capture each slide individually (same as image export), then merge into PDF
+    setIsPrinting(true);
+    try {
       const pdf = new jsPDF({
         unit: "px",
         format: [SIZE.width, SIZE.height],
@@ -209,7 +203,6 @@ export function useComponentPrinter() {
         ) as HTMLElement;
         if (!pageContent) continue;
 
-        // Use same capture method as image export for consistent quality
         const dataUrl = await captureSlideToDataUrl(
           pageContent,
           "png",
@@ -218,19 +211,16 @@ export function useComponentPrinter() {
         );
 
         if (i > 0) pdf.addPage();
-        pdf.addImage(
-          dataUrl,
-          "PNG",
-          0,
-          0,
-          SIZE.width,
-          SIZE.height
-        );
+        pdf.addImage(dataUrl, "PNG", 0, 0, SIZE.width, SIZE.height);
       }
 
       pdf.save(watch("filename"));
-    },
-  });
+    } catch (err) {
+      console.error("PDF export failed:", err);
+    } finally {
+      setIsPrinting(false);
+    }
+  }, [watch, SIZE]);
 
   const exportAsImages = React.useCallback(
     async (format: ExportImageFormat, quality: number = 0.95) => {
