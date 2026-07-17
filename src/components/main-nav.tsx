@@ -105,7 +105,7 @@ export function MainNav({
       )}
     >
       <div className="flex gap-2 md:gap-4 items-center">
-        <Link href="/" className="items-center space-x-2 flex">
+        <Link href="/" className="items-center space-x-2 flex" prefetch={false} scroll={false}>
           <Icons.logo />
           <span className="hidden lg:inline-block font-bold">
             Carousel Generator
