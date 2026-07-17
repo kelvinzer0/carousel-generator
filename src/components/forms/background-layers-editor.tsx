@@ -81,7 +81,7 @@ function SortableLayerItem({
         <LayerTypeIcon type={layer.type} />
 
         <span className="text-sm font-medium flex-1 capitalize">
-          {layer.type}
+          Layer {index + 1} · {layer.type}
         </span>
 
         <button

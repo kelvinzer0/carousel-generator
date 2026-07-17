@@ -71,13 +71,13 @@ export function CommonPage({
       {/* Legacy background color fallback */}
       <BackgroundLayer background={config.theme.background} className="-z-30" />
 
-      {/* Background layers (new system) */}
+      {/* Background layers (new system) — last in array = top layer */}
       {config.theme.backgroundLayers?.map((layer, i) => (
         <BackgroundLayerRenderer
           key={layer.id}
           layer={layer}
           className=""
-          style={{ zIndex: -20 + i }}
+          style={{ zIndex: -100 + i }}
         />
       ))}
 
