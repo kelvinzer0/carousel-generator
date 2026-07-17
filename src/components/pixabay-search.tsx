@@ -82,8 +82,22 @@ export function PixabaySearch({ onSelect, className }: PixabaySearchProps) {
     }
   }, [images.length, totalHits, loading, query, page, searchImages]);
 
-  const handleSelect = useCallback((image: PixabayImage) => {
-    onSelect(image.largeImageURL || image.webformatURL);
+  const handleSelect = useCallback(async (image: PixabayImage) => {
+    const imageUrl = image.largeImageURL || image.webformatURL;
+    try {
+      // Fetch image and convert to blob/data URL for reliable storage
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onSelect(reader.result as string);
+      };
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      // Fallback: use URL directly
+      console.error("Failed to convert image to blob:", err);
+      onSelect(imageUrl);
+    }
   }, [onSelect]);
 
   return (

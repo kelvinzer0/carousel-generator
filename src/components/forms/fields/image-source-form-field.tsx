@@ -120,7 +120,8 @@ export function ImageSourceFormField({
     <TabsContent value={ImageInputType.Pixabay}>
         <PixabaySearch
           onSelect={(imageUrl) => {
-            form.setValue(fieldName, { type: ImageInputType.Pixabay, src: imageUrl });
+            // Use URL type since we convert to data URL (blob)
+            form.setValue(fieldName, { type: ImageInputType.Url, src: imageUrl });
           }}
         />
       </TabsContent>
