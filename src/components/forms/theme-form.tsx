@@ -375,7 +375,7 @@ export function ThemeForm({}: {}) {
   const isCustom = watch("config.theme.isCustom");
   return (
     <Form {...form}>
-      <form className="space-y-6 w-full py-4">
+      <form className="space-y-6 w-full py-4" onSubmit={(e) => e.preventDefault()}>
         <FormField
           control={form.control}
           name="config.theme.isCustom"

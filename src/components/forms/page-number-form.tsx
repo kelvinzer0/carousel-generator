@@ -18,7 +18,7 @@ export function PageNumberForm({}: {}) {
 
   return (
     <Form {...form}>
-      <form className="space-y-6 w-full">
+      <form className="space-y-6 w-full" onSubmit={(e) => e.preventDefault()}>
         <FormField
           control={form.control}
           name="config.pageNumber.showNumbers"

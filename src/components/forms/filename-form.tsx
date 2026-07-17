@@ -18,7 +18,7 @@ export function FilenameForm({ className = "" }: { className?: string }) {
 
   return (
     <Form {...form}>
-      <form className="">
+      <form className="" onSubmit={(e) => e.preventDefault()}>
         <FormField
           control={form.control}
           name="filename"
