@@ -429,25 +429,29 @@ export function BackgroundLayersEditor() {
   const layers = form.watch("config.theme.backgroundLayers") || [];
 
   const updateLayer = (index: number, updates: Partial<BackgroundLayerItemType>) => {
-    const newLayers = layers.map((layer, i) =>
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
+    const newLayers = currentLayers.map((layer, i) =>
       i === index ? { ...layer, ...updates } : layer
     );
-    form.setValue("config.theme.backgroundLayers", newLayers);
+    form.setValue("config.theme.backgroundLayers", newLayers, { shouldDirty: true });
   };
 
   const removeLayer = (index: number) => {
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
     form.setValue(
       "config.theme.backgroundLayers",
-      layers.filter((_, i) => i !== index)
+      currentLayers.filter((_, i) => i !== index)
     );
   };
 
   const toggleVisibility = (index: number) => {
-    updateLayer(index, { visible: !layers[index].visible });
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
+    updateLayer(index, { visible: !currentLayers[index].visible });
   };
 
   const moveLayer = (index: number, direction: "up" | "down") => {
-    const newLayers = [...layers];
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
+    const newLayers = [...currentLayers];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newLayers.length) return;
     [newLayers[index], newLayers[targetIndex]] = [newLayers[targetIndex], newLayers[index]];
@@ -455,6 +459,7 @@ export function BackgroundLayersEditor() {
   };
 
   const addLayer = (type: "color" | "gradient" | "image" | "pattern") => {
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
     const id = `layer-${Date.now()}`;
     const newLayer: BackgroundLayerItemType = {
       id,
@@ -488,7 +493,7 @@ export function BackgroundLayersEditor() {
           }
         : {}),
     };
-    form.setValue("config.theme.backgroundLayers", [...layers, newLayer]);
+    form.setValue("config.theme.backgroundLayers", [...currentLayers, newLayer], { shouldDirty: true, shouldTouch: true });
   };
 
   return (

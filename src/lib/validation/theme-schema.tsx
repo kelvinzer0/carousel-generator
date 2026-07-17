@@ -25,14 +25,16 @@ export const TextureSchema = z.object({
   blend: z.enum(["normal", "multiply", "overlay", "soft-light", "hard-light"]).default("normal"),
 });
 
+export const PatternIconSchema = z.object({
+  emoji: z.string(),
+  name: z.string(),
+  faClass: z.string(),
+  unicode: z.string(),
+});
+
 export const PatternSchema = z.object({
   type: z.literal("pattern"),
-  icons: z.array(z.object({
-    emoji: z.string(),
-    name: z.string(),
-    faClass: z.string(),
-    unicode: z.string(),
-  })).min(1),
+  icons: z.array(PatternIconSchema).default([]),
   color: z.string().default("#ffffff"),
   opacity: z.number().min(0).max(100).default(15),
   iconSize: z.number().min(8).max(120).default(24),
@@ -76,5 +78,6 @@ export const ThemeSchema = ColorSchema.extend({
 export type GradientType = z.infer<typeof GradientSchema>;
 export type TextureType = z.infer<typeof TextureSchema>;
 export type PatternType = z.infer<typeof PatternSchema>;
+export type PatternIconType = z.infer<typeof PatternIconSchema>;
 export type TextStyleType = z.infer<typeof TextStyleSchema>;
 export type BackgroundLayerItemType = z.infer<typeof BackgroundLayerItemSchema>;
