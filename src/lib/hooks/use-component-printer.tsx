@@ -78,33 +78,6 @@ function restoreGradientText(
   });
 }
 
-/**
- * Embed font-face declarations into the element for export.
- * This ensures fonts are available when rendering to canvas.
- */
-function embedFontStyles(doc: Document, element: HTMLElement) {
-  const styleSheets = Array.from(doc.styleSheets);
-  let fontCSS = "";
-
-  styleSheets.forEach((sheet) => {
-    try {
-      const rules = Array.from(sheet.cssRules || []);
-      rules.forEach((rule) => {
-        if (rule instanceof CSSFontFaceRule) {
-          fontCSS += rule.cssText + "\n";
-        }
-      });
-    } catch (e) {
-      // Cross-origin stylesheet, skip
-    }
-  });
-
-  if (fontCSS) {
-    const style = doc.createElement("style");
-    style.textContent = fontCSS;
-    element.prepend(style);
-  }
-}
 
 /**
  * Hide UI elements in a slide before capture, return restore function.
@@ -200,52 +173,11 @@ export function useComponentPrinter() {
 
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
+  // Direct ref — no clone needed since PDF capture is per-slide
   const componentRef = React.useRef(null);
 
-  const reactToPrintContent = React.useCallback(() => {
-    const current = componentRef.current;
-
-    if (current && typeof current === "object") {
-      // @ts-ignore
-      const clone = current.cloneNode(true);
-
-      // Clean up the clone for export
-      proxyImgSources(clone);
-      removeSelectionStyleById(clone, "page-base-");
-      removeSelectionStyleById(clone, "content-image-");
-      removePaddingStyleById(clone, "carousel-item-");
-      removeStyleById(clone, "slide-wrapper-", "px-2");
-      removeAllById(clone, "add-slide-");
-      removeAllById(clone, "add-element-");
-      removeAllById(clone, "element-menubar-");
-      removeAllById(clone, "slide-menubar-");
-
-      // Remove any remaining buttons and UI controls
-      clone.querySelectorAll('button').forEach(btn => {
-        const text = btn.textContent?.trim();
-        if (text === '+' || text === '' || btn.querySelector('svg')) {
-          btn.remove();
-        }
-      });
-
-      // Remove tooltip triggers and other UI elements
-      clone.querySelectorAll('[data-slot="tooltip-trigger"]').forEach(el => el.remove());
-
-      // Embed fonts for proper rendering
-      embedFontStyles(document, clone);
-      insertFonts(clone);
-
-      clone.className = "flex flex-col";
-      clone.style = {};
-
-      return clone;
-    }
-
-    return componentRef.current;
-  }, []);
-
   const handlePrint = useReactToPrint({
-    content: reactToPrintContent,
+    content: () => componentRef.current,
     removeAfterPrint: true,
     onBeforePrint: () => setIsPrinting(true),
     onAfterPrint: () => setIsPrinting(false),
@@ -358,82 +290,4 @@ export function useComponentPrinter() {
   };
 }
 
-function proxyImgSources(html: HTMLElement) {
-  const images = Array.from(
-    html.getElementsByTagName("img")
-  ) as HTMLImageElement[];
-  const url = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
-  const externalImages = images.filter(
-    (image) =>
-      !image.src.startsWith("/") &&
-      !image.src.startsWith("data:") &&
-      !image.src.startsWith(url)
-  );
-
-  externalImages.forEach((image) => {
-    try {
-      const apiRequestURL = new URL(`${url}/api/proxy`);
-      apiRequestURL.searchParams.set("url", image.src);
-      image.src = apiRequestURL.toString();
-    } catch (e) {
-      console.warn("Failed to proxy image:", image.src, e);
-    }
-  });
-}
-
-function removeAllById(html: HTMLElement, id: string) {
-  const elements = Array.from(
-    html.querySelectorAll(`[id^=${id}]`)
-  ) as HTMLDivElement[];
-  elements.forEach((element) => {
-    element.remove();
-  });
-}
-
-function removePaddingStyleById(html: HTMLElement, id: string) {
-  const classNames = "pl-2 md:pl-4";
-  removeStyleById(html, id, classNames);
-}
-
-function removeSelectionStyleById(html: HTMLElement, id: string) {
-  const classNames = "outline-input ring-2 ring-offset-2 ring-ring";
-  removeStyleById(html, id, classNames);
-}
-
-function removeStyleById(html: HTMLElement, id: string, classNames: string) {
-  const elements = Array.from(
-    html.querySelectorAll(`[id^=${id}]`)
-  ) as HTMLDivElement[];
-  elements.forEach((element) => {
-    element.className = removeClassnames(element, classNames);
-  });
-}
-
-function removeClassnames(element: HTMLDivElement, classNames: string): string {
-  return element.className
-    .split(" ")
-    .filter((el) => !classNames.split(" ").includes(el))
-    .join(" ");
-}
-
-function insertFonts(element: HTMLElement) {
-  const allElements = Array.from(
-    element.getElementsByTagName("textarea")
-  ) as HTMLTextAreaElement[];
-
-  allElements.forEach(function (element) {
-    let tailwindFonts = element.className
-      .split(" ")
-      .filter((cn) => cn.startsWith("font-"));
-
-    tailwindFonts.forEach((font) => {
-      const fontFaceValue = getComputedStyle(
-        element.ownerDocument.body
-      ).getPropertyValue("--" + font);
-      if (fontFaceValue) {
-        element.style.fontFamily = fontFaceValue;
-      }
-    });
-  });
-}
