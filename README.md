@@ -1,98 +1,80 @@
 # Carousel Generator
 
-**Carousel Generator** is an open-source carousel generator tool that allows you to easily create and customize carousels for your LinkedIn.
+**Carousel Generator** — open-source tool untuk membuat dan mengkustomisasi carousel untuk LinkedIn, Instagram, dan TikTok.
 
 🔗 [Website](https://carouselgenerator.vercel.app)
 
-## AI Demo
-
-https://github.com/FranciscoMoretti/carousel-generator/assets/16997807/50cb033d-84d5-4214-93aa-45c6f524d0b1
-
 ## Features
 
-Carousel Generator comes packed with a variety of features to help you create stunning carousels effortlessly:
-
-- 🪄 Generate carousels with AI
-- ✍️ Forms powered by [react-hook-form](https://react-hook-form.com/)
+### Core
+- 🪄 Generate carousels with AI (OpenAI GPT-4o-mini)
+- ✍️ Forms powered by [react-hook-form](https://react-hook-form.com/) + [ZOD](https://zod.dev/) validation
 - 🎨 Sleek UI components from [Shadcn/ui](https://ui.shadcn.com/)
-- ✅ Input validation using [ZOD](https://zod.dev/)
-- 🌐 Responsive layout for various screen sizes
-- 🔄 Automatic updates on changes
-- 🍥 Icons from [Lucide Dev](https://lucide.dev/)
-- 🆎 Titles auto-balance (no orphan words)
+- 🌐 Responsive layout
+- 🔄 Real-time preview — automatic updates on changes
 - 💾 Data persists with browser refresh
-- ⚙️ Configure the carousel with various settings
-- ➕ Add, remove, or reorder slides with ease
-- 🖼️ Different types of slides, including Intro, Content, and Outro
-- 📤 Export and Import settings
-- 📥 Export and import slide content
-- 😃 Support for emojis to spark joy with your carousels
-- 📝 Select fonts for titles and content to match your style
+- ➕ Add, remove, or reorder slides
+- 🖼️ Slide types: Intro, Content, Outro
+- 📤 Export & Import settings and slide content
+- 😃 Emoji support
+- 📝 Multiple font selection for titles and content
+
+### Export & Output
+- 📥 **Multi-format export** — PNG, WEBP, JPEG, PDF
+- 📦 **ZIP bundling** — batch export all slides as a single ZIP file
+- 🎯 **High quality export** — better font handling and rendering fidelity
+- 🧹 **Clean export** — UI elements (buttons, placeholders) automatically hidden during export
+
+### Design & Styling
+- 🎨 **Gradient & texture support** for text colors
+- 📐 **Size presets** — LinkedIn, Instagram, TikTok carousel dimensions
+- 🆎 Titles auto-balance (no orphan words)
+- 🍥 Icons from [Lucide Dev](https://lucide.dev/)
 
 ## Usage
 
-1. Visit [carouselgenerator.vercel.app](https://carouselgenerator.vercel.app) to access the Carousel Generator tool.
-
-2. Customize your carousel settings and add/edit slides as needed.
-
-3. Download your carousel to post on social media
+1. Visit [carouselgenerator.vercel.app](https://carouselgenerator.vercel.app)
+2. Choose a size preset (LinkedIn / Instagram / TikTok)
+3. Customize settings and add/edit slides
+4. Use AI to generate content, or write manually
+5. Export as PNG, WEBP, JPEG, or PDF
 
 ## Installation
 
-To get started with Carousel Generator, follow these simple installation steps:
+```bash
+# 1. Clone
+git clone https://github.com/kelvinzer0/carousel-generator.git
+cd carousel-generator
 
-1. Create your environment file
+# 2. Environment
+cp .env.example .env.local
+# Edit .env.local with your OpenAI API key
 
-   ```bash
-   cp .env.example .env
-   ```
+# 3. Install
+pnpm i
 
-2. Install the required dependencies using `pnpm`:
+# 4. Run
+pnpm dev
+```
 
-   ```bash
-   pnpm i
-   ```
+### Environment Variables
 
-   or
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_APP_URL` | Yes | App URL (default: `http://localhost:3000`) |
+| `OPENAI_API_KEY` | For AI | [OpenAI API key](https://platform.openai.com/account/api-keys) |
+| `KV_REST_API_URL` | Optional | Vercel KV URL (for rate limiting) |
+| `KV_REST_API_TOKEN` | Optional | Vercel KV token (for rate limiting) |
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-3. Create the environment variables file:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   and update the values in the `.env.local` file.
-
-   To get an OpenaI API key, use [your OpenAI API key](https://platform.openai.com/account/api-keys)
-
-   Rate limiting is optional. To enable it, you'll need [Vercel KV credentials](https://vercel.com/docs/storage/vercel-kv/quickstart#quickstart)
-
-   NOTE: Remember to include these environment variables on your server if you are deploying this application.
-
-4. Start the development server:
-
-   ```bash
-   pnpm dev
-   ```
-
-   or
-
-   ```bash
-   npm run dev
-   ```
-
-Now you're all set to start using Carousel Generator!
+- **Framework:** Next.js 14 (App Router)
+- **UI:** Tailwind CSS + Shadcn/ui + Radix UI
+- **Forms:** react-hook-form + ZOD
+- **AI:** OpenAI via LangChain
+- **Export:** html-to-image + jsPDF
+- **Language:** TypeScript
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-Happy carousel generating! If you have any questions or need assistance, feel free to [open an issue](https://github.com/FranciscoMoretti/carousel-generator/issues) on GitHub.
-
-🚀 Thank you for using Carousel Generator!
+[MIT License](LICENSE)

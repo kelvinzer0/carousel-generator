@@ -6,7 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
 import { toCanvas, toPng, toJpeg } from "html-to-image";
 import { Options as HtmlToImageOptions } from "html-to-image/lib/types";
-import { jsPDF, jsPDFOptions } from "jspdf";
+import { jsPDF } from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
@@ -19,85 +19,7 @@ const FORMAT_EXT: Record<ExportImageFormat, string> = {
 };
 
 // High quality scale factors
-const EXPORT_SCALE = 3; // 3x for high quality print (300 DPI equivalent)
-const IMAGE_EXPORT_SCALE = 4; // 4x for image exports
-
-type HtmlToPdfOptions = {
-  margin: [number, number, number, number];
-  filename: string;
-  image: { type: string; quality: number };
-  htmlToImage: HtmlToImageOptions;
-  jsPDF: jsPDFOptions;
-};
-
-export const toPx = function toPx(val: number, k: number) {
-  return Math.floor(((val * k) / 72) * 96);
-};
-
-function getPdfPageSize(opt: HtmlToPdfOptions) {
-  // @ts-ignore
-  const pageSize = jsPDF.getPageSize(opt.jsPDF);
-
-  if (!pageSize.hasOwnProperty("inner")) {
-    pageSize.inner = {
-      width: pageSize.width - opt.margin[1] - opt.margin[3],
-      height: pageSize.height - opt.margin[0] - opt.margin[2],
-    };
-    pageSize.inner.px = {
-      width: toPx(pageSize.inner.width, pageSize.k),
-      height: toPx(pageSize.inner.height, pageSize.k),
-    };
-    pageSize.inner.ratio = pageSize.inner.height / pageSize.inner.width;
-  }
-
-  return pageSize;
-}
-
-function canvasToPdf(canvas: HTMLCanvasElement, opt: HtmlToPdfOptions) {
-  const pdfPageSize = getPdfPageSize(opt);
-
-  var pxFullHeight = canvas.height;
-  var pxPageHeight = Math.floor(canvas.width * pdfPageSize.inner.ratio);
-  var nPages = Math.ceil(pxFullHeight / pxPageHeight);
-  var pageHeight = pdfPageSize.inner.height;
-
-  var pageCanvas = document.createElement("canvas");
-  var pageCtx = pageCanvas.getContext("2d")!;
-  pageCanvas.width = canvas.width;
-  pageCanvas.height = pxPageHeight;
-
-  const pdf = new jsPDF(opt.jsPDF);
-
-  for (var page = 0; page < nPages; page++) {
-    if (page === nPages - 1 && pxFullHeight % pxPageHeight !== 0) {
-      pageCanvas.height = pxFullHeight % pxPageHeight;
-      pageHeight =
-        (pageCanvas.height * pdfPageSize.inner.width) / pageCanvas.width;
-    }
-
-    var w = pageCanvas.width;
-    var h = pageCanvas.height;
-
-    pageCtx.fillStyle = "white";
-    pageCtx.fillRect(0, 0, w, h);
-    pageCtx.drawImage(canvas, 0, page * pxPageHeight, w, h, 0, 0, w, h);
-
-    if (page) pdf.addPage();
-    var imgData = pageCanvas.toDataURL(
-      "image/" + opt.image.type,
-      opt.image.quality
-    );
-    pdf.addImage(
-      imgData,
-      opt.image.type,
-      opt.margin[1],
-      opt.margin[0],
-      pdfPageSize.inner.width,
-      pageHeight
-    );
-  }
-  return pdf;
-}
+const IMAGE_EXPORT_SCALE = 4; // 4x for high quality export (consistent for both images and PDF)
 
 function getSlideElements(container: HTMLElement): HTMLElement[] {
   const items = container.querySelectorAll('[id^="carousel-item-"]');
@@ -329,51 +251,52 @@ export function useComponentPrinter() {
     onAfterPrint: () => setIsPrinting(false),
     pageStyle: `@page { size: ${SIZE.width}px ${SIZE.height}px; margin: 0; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`,
     print: async (printIframe) => {
-      const contentDocument = printIframe.contentDocument;
-      if (!contentDocument) {
-        console.error("iFrame does not have a document content");
+      const container = document.getElementById("element-to-download-as-pdf");
+      if (!container) {
+        console.error("Container element not found");
         return;
       }
 
-      const html = contentDocument.getElementById(
-        "element-to-download-as-pdf"
-      );
-      if (!html) {
-        console.error("Couldn't find element to convert to PDF");
+      const slideElements = getSlideElements(container);
+      if (slideElements.length === 0) {
+        console.error("No slides found");
         return;
       }
 
-      const options: HtmlToPdfOptions = {
-        margin: [0, 0, 0, 0],
-        filename: watch("filename"),
-        image: { type: "webp", quality: 0.98 },
-        htmlToImage: {
-          height: SIZE.height * numPages,
-          width: SIZE.width,
-          canvasHeight: SIZE.height * numPages * EXPORT_SCALE,
-          canvasWidth: SIZE.width * EXPORT_SCALE,
-          pixelRatio: EXPORT_SCALE,
-          cacheBust: true,
-        },
-        jsPDF: { unit: "px", format: [SIZE.width, SIZE.height] },
-      };
+      // Capture each slide individually (same as image export), then merge into PDF
+      const pdf = new jsPDF({
+        unit: "px",
+        format: [SIZE.width, SIZE.height],
+        orientation: SIZE.width > SIZE.height ? "landscape" : "portrait",
+      });
 
-      const modified = flattenGradientText(html);
-      const canvas = await toCanvas(html, options.htmlToImage).catch(
-        (err) => {
-          console.error("Canvas generation failed:", err);
-          return null;
-        }
-      );
-      restoreGradientText(modified);
+      for (let i = 0; i < slideElements.length; i++) {
+        const slideEl = slideElements[i];
+        const pageContent = slideEl.querySelector(
+          "[id^='page-base-']"
+        ) as HTMLElement;
+        if (!pageContent) continue;
 
-      if (!canvas) {
-        console.error("Failed to create canvas");
-        return;
+        // Use same capture method as image export for consistent quality
+        const dataUrl = await captureSlideToDataUrl(
+          pageContent,
+          "png",
+          1.0,
+          IMAGE_EXPORT_SCALE
+        );
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(
+          dataUrl,
+          "PNG",
+          0,
+          0,
+          SIZE.width,
+          SIZE.height
+        );
       }
 
-      const pdf = canvasToPdf(canvas, options);
-      pdf.save(options.filename);
+      pdf.save(watch("filename"));
     },
   });
 
