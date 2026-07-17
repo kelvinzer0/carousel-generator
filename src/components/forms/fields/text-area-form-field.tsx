@@ -60,7 +60,6 @@ export function TextAreaFormField({
                 onClick={(event) => {
                   event.stopPropagation();
                 }}
-                value={form.getValues(fieldName)}
               />
             ) : (
               <AutoTextarea
@@ -75,7 +74,6 @@ export function TextAreaFormField({
                 onClick={(event) => {
                   event.stopPropagation();
                 }}
-                value={form.getValues(fieldName)}
               />
             )}
           </FormControl>

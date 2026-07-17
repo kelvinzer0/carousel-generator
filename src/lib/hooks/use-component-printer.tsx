@@ -80,6 +80,7 @@ async function captureSlideToDataUrl(
   // Hide UI elements before capture
   const restoreUI = hideUIElements(slideElement);
   // Pre-load texture images, then pre-render gradient text to canvas
+  await document.fonts.ready;
   await preloadTextures(slideElement);
   const restoreGradient = prerenderGradientText(slideElement);
 
