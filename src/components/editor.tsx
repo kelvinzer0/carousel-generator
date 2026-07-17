@@ -13,17 +13,23 @@ export default function Editor({}: {}) {
 
   return (
     <RefProvider myRef={componentRef}>
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         <MainNav
-          className="h-14 border-b px-6 "
+          className="h-14 border-b px-4 md:px-6 shrink-0"
           handlePrint={handlePrint}
           isPrinting={isPrinting}
           exportAsImages={exportAsImages}
           isExporting={isExporting}
         />
-        <div className="flex-1 flex flex-start  md:grid md:grid-cols-[320px_minmax(0,1fr)] ">
-          <SidebarPanel />
-          <SlidesEditor />
+        <div className="flex-1 flex flex-col md:flex-row min-h-0">
+          {/* Sidebar: hidden on mobile, shown on md+ */}
+          <aside className="hidden md:block md:w-[320px] lg:w-[360px] shrink-0 border-r overflow-hidden">
+            <SidebarPanel />
+          </aside>
+          {/* Editor area */}
+          <div className="flex-1 min-w-0 min-h-0">
+            <SlidesEditor />
+          </div>
         </div>
       </div>
     </RefProvider>

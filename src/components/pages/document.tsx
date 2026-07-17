@@ -68,11 +68,11 @@ export function Document({
         opts={{
           align: "start",
         }}
-        className="w-full sm:w-4/5 min-w-[400px]"
+        className="w-full sm:w-4/5 min-w-[280px]"
         style={{
           transform: `scale(${scale})`,
           transformOrigin: "top",
-          minWidth: `${400 + SLIDE_PADDING_X * 2}px`,
+          minWidth: `${Math.min(400, SIZE.width) + SLIDE_PADDING_X * 2}px`,
           height: scale * (SIZE.height + PADDING_TOP + PADDING_BOTTOM),
         }}
       >

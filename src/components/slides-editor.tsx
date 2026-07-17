@@ -49,8 +49,8 @@ export function SlidesEditor({}: SlidesEditorProps) {
   const sizePresetKey = (document.config?.pageSize || "linkedin") as SizePresetKey;
   const SIZE = SIZE_PRESETS[sizePresetKey] || SIZE_PRESETS.linkedin;
   const mdWindowWidthPx = 770;
-  const screenToSlideMinRatio = windowWidth > mdWindowWidthPx ? 2.5 : 1.2;
-  const scale = Math.min(1, windowWidth / screenToSlideMinRatio / SIZE.width);
+  const screenToSlideMinRatio = windowWidth > mdWindowWidthPx ? 2.5 : 1.5;
+  const scale = Math.min(1, (windowWidth - 32) / screenToSlideMinRatio / SIZE.width);
 
   return (
     <div

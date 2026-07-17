@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-// import { SidebarNavItem } from "types/nav";
-
 import { cn } from "@/lib/utils";
 import { BrandForm } from "@/components/forms/brand-form";
 import { ThemeForm } from "@/components/forms/theme-form";
@@ -12,7 +10,6 @@ import {
   VerticalTabsList,
   VerticalTabsTrigger,
 } from "@/components/ui/vertical-tabs";
-import { usePagerContext } from "@/lib/providers/pager-context";
 import { Separator } from "@/components/ui/separator";
 import { FontsForm } from "@/components/forms/fonts-form";
 import { PageNumberForm } from "./forms/page-number-form";
@@ -31,12 +28,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Drawer } from "vaul";
 import { DrawerContent, DrawerTrigger } from "@/components/drawer";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { buttonVariants } from "./ui/button";
-import { ScrollBar } from "./ui/scroll-area";
 import { useSelectionContext } from "@/lib/providers/selection-context";
-import { useFieldsFileImporter } from "@/lib/hooks/use-fields-file-importer";
-import { set } from "zod";
 import { StyleMenu } from "@/components/style-menu";
 import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
@@ -80,43 +74,101 @@ export function SidebarPanel({ className }: { className?: string }) {
   const { currentSelection } = useSelectionContext();
 
   return (
-    <div className={cn("h-full flex flex-1", className)}>
-      <aside className="top-14 z-30 hidden h-full w-full shrink-0 md:sticky md:block border-r">
+    <div className={cn("h-full flex flex-col", className)}>
+      {/* Mobile: horizontal tab bar at bottom */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t">
+        <MobileTabBar />
+      </div>
+
+      {/* Desktop: vertical sidebar */}
+      <aside className="hidden md:flex h-full">
         <SidebarTabsPanel />
       </aside>
-      <div className="block md:hidden h-0">
-        <Drawer.Root modal={true}>
-          <DrawerTrigger>
-            <CircularFloatingButton className="bottom-28 left-4">
-              <Plus className="w-4 h-4" />
-            </CircularFloatingButton>
-          </DrawerTrigger>
-          <DrawerContent className="h-[60%] ">
-            <DrawerFormsPanel className="mt-8" />
-          </DrawerContent>
-        </Drawer.Root>
-      </div>
-      <div className="block md:hidden h-0">
-        <Drawer.Root modal={true}>
-          <DrawerTrigger>
-            {currentSelection ? (
-              <CircularFloatingButton className="bottom-28 right-4">
-                <Brush className="w-4 h-4" />
-              </CircularFloatingButton>
-            ) : null}
-          </DrawerTrigger>
-          <DrawerContent className="h-[40%] ">
-            <StyleMenu form={form} className={"m-4"} />
-          </DrawerContent>
-        </Drawer.Root>
-      </div>
+
+      {/* Mobile floating buttons */}
+      <MobileFloatingButtons />
     </div>
+  );
+}
+
+function MobileTabBar() {
+  const form: DocumentFormReturn = useFormContext();
+  const { currentSelection } = useSelectionContext();
+  const [openDrawer, setOpenDrawer] = useState<string | null>(null);
+
+  return (
+    <>
+      <div className="flex justify-around items-center h-14 px-2">
+        {Object.values(ALL_FORMS).map((tabInfo) => (
+          <button
+            key={tabInfo.value}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-md text-muted-foreground transition-colors",
+              openDrawer === tabInfo.value && "text-primary bg-muted"
+            )}
+            onClick={() => setOpenDrawer(tabInfo.value)}
+          >
+            <tabInfo.icon className="h-4 w-4" />
+            <span className="text-[10px]">{tabInfo.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <Drawer.Root
+        open={openDrawer !== null}
+        onOpenChange={(open) => !open && setOpenDrawer(null)}
+      >
+        <DrawerContent className="max-h-[70vh]">
+          <div className="overflow-y-auto p-4">
+            {openDrawer && (
+              <>
+                <h4 className="text-lg font-semibold mb-3">
+                  {ALL_FORMS[openDrawer]?.name}
+                </h4>
+                <Separator className="mb-4" />
+                {openDrawer === "brand" && <BrandForm />}
+                {openDrawer === "theme" && <ThemeForm />}
+                {openDrawer === "fonts" && <FontsForm />}
+                {openDrawer === "number" && <PageNumberForm />}
+                {openDrawer === "size" && <SizeForm />}
+              </>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer.Root>
+    </>
+  );
+}
+
+function MobileFloatingButtons() {
+  const form: DocumentFormReturn = useFormContext();
+  const { currentSelection } = useSelectionContext();
+
+  if (!currentSelection) return null;
+
+  return (
+    <Drawer.Root modal={true}>
+      <DrawerTrigger asChild>
+        <button
+          className={cn(
+            buttonVariants({ variant: "default", size: "icon" }),
+            "fixed bottom-20 right-4 rounded-full w-12 h-12 z-50 shadow-lg md:hidden"
+          )}
+        >
+          <Brush className="w-4 h-4" />
+        </button>
+      </DrawerTrigger>
+      <DrawerContent className="max-h-[50vh]">
+        <div className="overflow-y-auto p-4">
+          <StyleMenu form={form} />
+        </div>
+      </DrawerContent>
+    </Drawer.Root>
   );
 }
 
 function VerticalTabTriggerButton({ tabInfo }: { tabInfo: TabInfo }) {
   const { setCurrentSelection } = useSelectionContext();
-  //  TODO Convert this comp into a forwardref like its child
   return (
     <VerticalTabsTrigger
       value={tabInfo.value}
@@ -124,25 +176,9 @@ function VerticalTabTriggerButton({ tabInfo }: { tabInfo: TabInfo }) {
       onFocus={() => setCurrentSelection("", null)}
     >
       <tabInfo.icon className="h-4 w-4" />
-      <span className="sr-only ">{tabInfo.name}</span>
+      <span className="sr-only">{tabInfo.name}</span>
       <p className="text-xs">{tabInfo.name}</p>
     </VerticalTabsTrigger>
-  );
-}
-
-function HorizontalTabTriggerButton({ tabInfo }: { tabInfo: TabInfo }) {
-  const { setCurrentSelection } = useSelectionContext();
-  //  TODO Convert this comp into a forwardref like its child
-  return (
-    <TabsTrigger
-      value={tabInfo.value}
-      className="h-16 flex flex-col gap-2 items-center py-2 justify-center"
-      onFocus={() => setCurrentSelection("", null)}
-    >
-      <tabInfo.icon className="h-4 w-4" />
-      <span className="sr-only ">{tabInfo.name}</span>
-      <p className="text-xs">{tabInfo.name}</p>
-    </TabsTrigger>
   );
 }
 
@@ -156,15 +192,14 @@ export function SidebarTabsPanel() {
       value={currentSelection ? "" : tab}
       onValueChange={(val) => {
         if (val) {
-          // Don't lost previous state when showing current selection
           setTab(val);
         }
       }}
       className="flex-1 h-full p-0"
     >
       <div className="flex flex-row h-full w-full">
-        <ScrollArea className="border-r h-full bg-muted">
-          <VerticalTabsList className="grid grid-cols-1 gap-2 w-20 rounded-none">
+        <ScrollArea className="border-r h-full bg-muted shrink-0">
+          <VerticalTabsList className="grid grid-cols-1 gap-1 w-16 lg:w-20 rounded-none">
             <VerticalTabTriggerButton tabInfo={ALL_FORMS.brand} />
             <VerticalTabTriggerButton tabInfo={ALL_FORMS.theme} />
             <VerticalTabTriggerButton tabInfo={ALL_FORMS.fonts} />
@@ -172,54 +207,50 @@ export function SidebarTabsPanel() {
             <VerticalTabTriggerButton tabInfo={ALL_FORMS.size} />
           </VerticalTabsList>
         </ScrollArea>
-        <div className="p-2 flex flex-col items-stretch w-full ">
-          {/* //TODO: Share this area with stylemenu */}
+        <div className="flex-1 overflow-y-auto">
           {currentSelection ? (
-            <StyleMenu form={form} className={"m-4"} />
-          ) : // TODO: Create consistent styles between tabs and StyleMenu
-          null}
+            <StyleMenu form={form} className="m-4" />
+          ) : null}
           <VerticalTabsContent
             value={ALL_FORMS.brand.value}
             className="mt-0 border-0 p-0 m-4"
           >
-            <h4 className="text-xl font-semibold">{ALL_FORMS.brand.name}</h4>
-            <Separator className="mt-2 mb-4"></Separator>
+            <h4 className="text-lg font-semibold">{ALL_FORMS.brand.name}</h4>
+            <Separator className="mt-2 mb-4" />
             <BrandForm />
           </VerticalTabsContent>
           <VerticalTabsContent
             value={ALL_FORMS.theme.value}
             className="mt-0 border-0 p-0 m-4"
           >
-            <h4 className="text-xl font-semibold">{ALL_FORMS.theme.name}</h4>
-            <Separator className="mt-2 mb-4"></Separator>
+            <h4 className="text-lg font-semibold">{ALL_FORMS.theme.name}</h4>
+            <Separator className="mt-2 mb-4" />
             <ThemeForm />
           </VerticalTabsContent>
           <VerticalTabsContent
             value={ALL_FORMS.fonts.value}
             className="mt-0 border-0 p-0 m-4"
           >
-            <h4 className="text-xl font-semibold">{ALL_FORMS.fonts.name}</h4>
-            <Separator className="mt-2 mb-4"></Separator>
+            <h4 className="text-lg font-semibold">{ALL_FORMS.fonts.name}</h4>
+            <Separator className="mt-2 mb-4" />
             <FontsForm />
           </VerticalTabsContent>
           <VerticalTabsContent
             value={ALL_FORMS.pageNumber.value}
             className="mt-0 border-0 p-0 m-4"
           >
-            <h4 className="text-xl font-semibold">
+            <h4 className="text-lg font-semibold">
               {ALL_FORMS.pageNumber.name}
             </h4>
-            <Separator className="mt-2 mb-4"></Separator>
+            <Separator className="mt-2 mb-4" />
             <PageNumberForm />
           </VerticalTabsContent>
           <VerticalTabsContent
             value={ALL_FORMS.size.value}
             className="mt-0 border-0 p-0 m-4"
           >
-            <h4 className="text-xl font-semibold">
-              {ALL_FORMS.size.name}
-            </h4>
-            <Separator className="mt-2 mb-4"></Separator>
+            <h4 className="text-lg font-semibold">{ALL_FORMS.size.name}</h4>
+            <Separator className="mt-2 mb-4" />
             <SizeForm />
           </VerticalTabsContent>
         </div>
@@ -227,104 +258,3 @@ export function SidebarTabsPanel() {
     </VerticalTabs>
   );
 }
-
-export function DrawerFormsPanel({ className }: { className: string }) {
-  const { currentSelection } = useSelectionContext();
-  const [tab, setTab] = useState(ALL_FORMS.brand.value);
-  // TODO: Lift state to not loose it when drawer gets closed ?
-
-  return (
-    <Tabs
-      value={currentSelection ? "" : tab}
-      onValueChange={(val) => {
-        if (val) {
-          // Don't lost previous state when showing current selection
-          setTab(val);
-        }
-      }}
-      className={cn("flex-1 w-full", className)}
-    >
-      <div className="flex flex-col h-full ">
-        <ScrollArea className=" border-b h-full bg-muted">
-          <TabsList className="grid grid-cols-4 gap-2 h-20 rounded-none">
-            <HorizontalTabTriggerButton tabInfo={ALL_FORMS.brand} />
-            <HorizontalTabTriggerButton tabInfo={ALL_FORMS.theme} />
-            <HorizontalTabTriggerButton tabInfo={ALL_FORMS.fonts} />
-            <HorizontalTabTriggerButton tabInfo={ALL_FORMS.pageNumber} />
-            <HorizontalTabTriggerButton tabInfo={ALL_FORMS.size} />
-          </TabsList>
-        </ScrollArea>
-        <div className="p-2 w-[320px] m-auto">
-          {/* // TODO Should be in a ScrollArea but it does not scroll */}
-          <TabsContent
-            value={ALL_FORMS.brand.value}
-            className="mt-0 border-0 p-0 m-4 "
-          >
-            <h4 className="text-xl font-semibold">{ALL_FORMS.brand.name}</h4>
-            <Separator className="mt-2 mb-4"></Separator>
-            <BrandForm />
-          </TabsContent>
-          <TabsContent
-            value={ALL_FORMS.theme.value}
-            className="mt-0 border-0 p-0 m-4 "
-          >
-            <h4 className="text-xl font-semibold">{ALL_FORMS.theme.name}</h4>
-            <Separator className="mt-2 mb-4"></Separator>
-            <ThemeForm />
-          </TabsContent>
-          <TabsContent
-            value={ALL_FORMS.fonts.value}
-            className="mt-0 border-0 p-0 m-4"
-          >
-            <h4 className="text-xl font-semibold">{ALL_FORMS.fonts.name}</h4>
-            <Separator className="mt-2 mb-4"></Separator>
-            <FontsForm />
-          </TabsContent>
-          <TabsContent
-            value={ALL_FORMS.pageNumber.value}
-            className="mt-0 border-0 p-0 m-4"
-          >
-            <h4 className="text-xl font-semibold">
-              {ALL_FORMS.pageNumber.name}
-            </h4>
-            <Separator className="mt-2 mb-4"></Separator>
-            <PageNumberForm />
-          </TabsContent>
-          <TabsContent
-            value={ALL_FORMS.size.value}
-            className="mt-0 border-0 p-0 m-4"
-          >
-            <h4 className="text-xl font-semibold">
-              {ALL_FORMS.size.name}
-            </h4>
-            <Separator className="mt-2 mb-4"></Separator>
-            <SizeForm />
-          </TabsContent>
-        </div>
-      </div>
-    </Tabs>
-  );
-}
-
-const CircularFloatingButton = ({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) => {
-  return (
-    <div
-      className={cn(
-        buttonVariants({
-          variant: "default",
-          size: "icon",
-        }),
-        "fixed bottom-4 right-4 rounded-full w-12 h-12 ",
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-};

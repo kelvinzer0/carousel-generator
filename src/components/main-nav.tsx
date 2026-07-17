@@ -43,24 +43,24 @@ export function MainNav({ handlePrint, isPrinting, exportAsImages, isExporting, 
   return (
     <div
       className={cn(
-        "flex gap-4 md:gap-10 justify-between items-center",
+        "flex gap-2 md:gap-4 lg:gap-10 justify-between items-center",
         className
       )}
     >
-      <div className="flex gap-4">
+      <div className="flex gap-2 md:gap-4 items-center">
         <Link href="/" className="items-center space-x-2 flex">
           <Icons.logo />
-          <span className="hidden font-bold md:inline-block">
+          <span className="hidden lg:inline-block font-bold">
             Carousel Generator
           </span>
         </Link>
         <EditorMenubar />
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden lg:flex">
         <Pager />
       </div>
-      <div className="flex gap-2 items-center">
-        <div className="hidden md:block">
+      <div className="flex gap-1 md:gap-2 items-center">
+        <div className="hidden lg:block">
           <FilenameForm />
         </div>
         <DropdownMenu>
