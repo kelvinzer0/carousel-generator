@@ -8,6 +8,7 @@ import { Options as HtmlToImageOptions } from "html-to-image/lib/types";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { prerenderGradientText } from "@/lib/prerender-gradient-text";
 
 export type ExportImageFormat = "png" | "webp" | "jpeg";
 
@@ -25,57 +26,6 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
   return Array.from(items) as HTMLElement[];
 }
 
-/**
- * Flatten gradient/texture text to solid colors for export.
- * html-to-image doesn't support background-clip: text in SVG foreignObject.
- * Returns modified elements for restoration.
- */
-function flattenGradientText(container: HTMLElement) {
-  const elements = container.querySelectorAll("*");
-  const modified: { el: HTMLElement; origStyle: string }[] = [];
-
-  elements.forEach((el) => {
-    const htmlEl = el as HTMLElement;
-    const computed = window.getComputedStyle(htmlEl);
-
-    if (
-      computed.backgroundClip === "text" ||
-      computed.webkitBackgroundClip === "text"
-    ) {
-      modified.push({
-        el: htmlEl,
-        origStyle: htmlEl.getAttribute("style") || "",
-      });
-
-      const bgImage = computed.backgroundImage;
-      let fallbackColor = computed.color || "#000000";
-
-      // Extract first color from gradient
-      const colorMatch = bgImage.match(
-        /rgb[a]?\([^)]+\)|#[0-9a-fA-F]{3,8}|oklch\([^)]+\)/
-      );
-      if (colorMatch) {
-        fallbackColor = colorMatch[0];
-      }
-
-      htmlEl.style.backgroundImage = "none";
-      htmlEl.style.backgroundClip = "unset";
-      htmlEl.style.webkitBackgroundClip = "unset";
-      htmlEl.style.color = fallbackColor;
-      htmlEl.style.webkitTextFillColor = fallbackColor;
-    }
-  });
-
-  return modified;
-}
-
-function restoreGradientText(
-  modified: { el: HTMLElement; origStyle: string }[]
-) {
-  modified.forEach(({ el, origStyle }) => {
-    el.setAttribute("style", origStyle);
-  });
-}
 
 
 /**
@@ -129,6 +79,8 @@ async function captureSlideToDataUrl(
 ): Promise<string> {
   // Hide UI elements before capture
   const restoreUI = hideUIElements(slideElement);
+  // Pre-render gradient text to canvas for export
+  const restoreGradient = prerenderGradientText(slideElement);
 
   const options: HtmlToImageOptions = {
     width: slideElement.offsetWidth,
@@ -143,8 +95,6 @@ async function captureSlideToDataUrl(
     cacheBust: true,
   };
 
-  const modified = flattenGradientText(slideElement);
-
   try {
     let dataUrl: string;
     if (format === "png") {
@@ -157,7 +107,7 @@ async function captureSlideToDataUrl(
     }
     return dataUrl;
   } finally {
-    restoreGradientText(modified);
+    restoreGradient();
     restoreUI();
   }
 }
