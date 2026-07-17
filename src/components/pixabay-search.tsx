@@ -71,6 +71,7 @@ export function PixabaySearch({ onSelect, className }: PixabaySearchProps) {
 
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (query.trim()) {
       searchImages(query, 1);
     }
