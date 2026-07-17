@@ -18,6 +18,11 @@ export function BackgroundLayerRenderer({
   if (!layer.visible) return null;
 
   const baseStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
     ...style,
     opacity: layer.opacity / 100,
   };
@@ -25,10 +30,7 @@ export function BackgroundLayerRenderer({
   if (layer.type === "color" && layer.color) {
     return (
       <div
-        className={cn(
-          "w-full h-full absolute top-0 left-0 right-0 bottom-0",
-          className
-        )}
+        className={cn("absolute inset-0", className)}
         style={{
           ...baseStyle,
           backgroundColor: layer.color,
@@ -41,7 +43,6 @@ export function BackgroundLayerRenderer({
     const { direction, stops } = layer.gradient;
     const gradientStops = stops
       .map((stop) => {
-        // Convert hex color + opacity to rgba
         const r = parseInt(stop.color.slice(1, 3), 16);
         const g = parseInt(stop.color.slice(3, 5), 16);
         const b = parseInt(stop.color.slice(5, 7), 16);
@@ -57,13 +58,11 @@ export function BackgroundLayerRenderer({
 
     return (
       <div
-        className={cn(
-          "w-full h-full absolute top-0 left-0 right-0 bottom-0",
-          className
-        )}
+        className={cn("absolute inset-0", className)}
         style={{
           ...baseStyle,
           backgroundImage: css,
+          backgroundSize: "cover",
         }}
       />
     );
@@ -72,10 +71,7 @@ export function BackgroundLayerRenderer({
   if (layer.type === "image" && layer.image?.src) {
     return (
       <div
-        className={cn(
-          "w-full h-full absolute top-0 left-0 right-0 bottom-0",
-          className
-        )}
+        className={cn("absolute inset-0", className)}
         style={baseStyle}
       >
         <img

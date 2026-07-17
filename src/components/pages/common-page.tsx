@@ -68,24 +68,26 @@ export function CommonPage({
 
   return (
     <PageBase size={size} fieldName={backgroundImageField}>
-      {/* Background layers (new system) — last in array = top layer */}
-      {config.theme.backgroundLayers && config.theme.backgroundLayers.length > 0 ? (
-        config.theme.backgroundLayers.map((layer, i) => (
-          <BackgroundLayerRenderer
-            key={layer.id}
-            layer={layer}
-            className=""
-            style={{ zIndex: i }}
-          />
-        ))
-      ) : (
-        /* Legacy background color fallback — only when no layers */
-        <BackgroundLayer background={config.theme.background} className="-z-1" />
-      )}
+      {/* Background layers container */}
+      <div className="absolute inset-0" style={{ zIndex: 0 }}>
+        {/* Background layers (new system) — last in array = top layer */}
+        {config.theme.backgroundLayers && config.theme.backgroundLayers.length > 0 ? (
+          config.theme.backgroundLayers.map((layer, i) => (
+            <BackgroundLayerRenderer
+              key={layer.id}
+              layer={layer}
+              style={{ zIndex: i }}
+            />
+          ))
+        ) : (
+          /* Legacy background color fallback — only when no layers */
+          <BackgroundLayer background={config.theme.background} />
+        )}
+      </div>
 
       {/* Legacy slide background image */}
       {slide.backgroundImage?.source.src ? (
-        <BackgroundImageLayer image={slide.backgroundImage} className="-z-1" />
+        <BackgroundImageLayer image={slide.backgroundImage} className="z-[1]" />
       ) : null}
       <PageFrame
         fieldName={backgroundImageField}
