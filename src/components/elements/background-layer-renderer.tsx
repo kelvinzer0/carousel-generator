@@ -2,9 +2,10 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { BackgroundLayerItemType } from "@/lib/validation/theme-schema";
+import { generatePatternDataUrl } from "@/lib/emoji-fontawesome-map";
 
 /**
- * Renders a single background layer (color, gradient, or image).
+ * Renders a single background layer (color, gradient, image, or pattern).
  */
 export function BackgroundLayerRenderer({
   layer,
@@ -82,6 +83,32 @@ export function BackgroundLayerRenderer({
         />
       </div>
     );
+  }
+
+  if (layer.type === "pattern" && layer.pattern?.icons?.length) {
+    const { icons, color, opacity, iconSize, patternSize, fill } = layer.pattern;
+    const patternUrl = generatePatternDataUrl(
+      icons,
+      patternSize,
+      iconSize,
+      color,
+      opacity / 100,
+      fill
+    );
+
+    if (patternUrl) {
+      return (
+        <div
+          className={cn("absolute inset-0", className)}
+          style={{
+            ...baseStyle,
+            backgroundImage: `url("${patternUrl}")`,
+            backgroundRepeat: "repeat",
+            backgroundSize: `${patternSize}px ${patternSize}px`,
+          }}
+        />
+      );
+    }
   }
 
   return null;

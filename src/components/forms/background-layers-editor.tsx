@@ -1,184 +1,303 @@
-import React, { useState } from "react";
-import { useFormContext } from "react-hook-form";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Eye, EyeOff, Trash2, Plus, Palette, Image as ImageIcon, Layers } from "lucide-react";
+"use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FormLabel } from "@/components/ui/form";
-import { Slider } from "@/components/ui/slider";
+import React, { useState, useMemo } from "react";
+import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
 import { BackgroundLayerItemType } from "@/lib/validation/theme-schema";
-import { ImageUploadButton } from "@/components/image-upload-button";
+import { BackgroundLayerRenderer } from "@/components/elements/background-layer-renderer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Trash2,
+  Eye,
+  EyeOff,
+  Plus,
+  GripVertical,
+  Paintbrush,
+  Layers,
+  Image as ImageIcon,
+  Sparkles,
+  Palette,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  extractEmoji,
+  mapEmojiToFontAwesome,
+  EmojiMapping,
+  generatePatternDataUrl,
+} from "@/lib/emoji-fontawesome-map";
 
-const LAYER_COLORS = [
-  "#ff6b6b", "#feca57", "#48dbfb", "#ff9ff3",
-  "#54a0ff", "#5f27cd", "#01a3a4", "#f368e0",
+// ── Gradient Directions ─────────────────────────────────────────
+
+const GRADIENT_DIRECTIONS = [
+  { label: "→ Right", value: "to right" },
+  { label: "← Left", value: "to left" },
+  { label: "↓ Bottom", value: "to bottom" },
+  { label: "↑ Top", value: "to top" },
+  { label: "↘ Diagonal", value: "to bottom right" },
+  { label: "↗ Diagonal", value: "to top right" },
+  { label: "◎ Radial", value: "radial" },
 ];
 
-function generateId() {
-  return Math.random().toString(36).substring(2, 9);
+// ── Emoji Pattern Auto-Generator ────────────────────────────────
+
+function EmojiPatternGenerator({
+  onGenerate,
+}: {
+  onGenerate: (icons: EmojiMapping[]) => void;
+}) {
+  const [inputText, setInputText] = useState("");
+
+  const detected = useMemo(() => {
+    if (!inputText.trim()) return [];
+    const emojiList = extractEmoji(inputText);
+    return emojiList
+      .map(mapEmojiToFontAwesome)
+      .filter((m): m is EmojiMapping => m !== null);
+  }, [inputText]);
+
+  return (
+    <div className="space-y-2 p-2 border rounded-md bg-muted/30">
+      <Label className="text-xs font-medium">Auto-detect Emoji → FA Icons</Label>
+      <Input
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Paste text with emoji here... 🎯🔥⭐"
+        className="h-8 text-xs"
+      />
+      {detected.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1">
+            {detected.map((icon, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-xs"
+                title={`${icon.name} (${icon.faClass})`}
+              >
+                {icon.emoji}
+                <span className="text-muted-foreground">{icon.name}</span>
+              </span>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-7 text-xs"
+            onClick={() => onGenerate(detected)}
+          >
+            <Sparkles className="w-3 h-3 mr-1" />
+            Generate Pattern from {detected.length} Icon{detected.length > 1 ? "s" : ""}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
-function SortableLayerItem({
+// ── Pattern Preview ─────────────────────────────────────────────
+
+function PatternPreview({
+  icons,
+  color,
+  opacity,
+  iconSize,
+  patternSize,
+  fill,
+}: {
+  icons: EmojiMapping[];
+  color: string;
+  opacity: number;
+  iconSize: number;
+  patternSize: number;
+  fill: "solid" | "outline";
+}) {
+  const url = useMemo(
+    () => generatePatternDataUrl(icons, patternSize, iconSize, color, opacity / 100, fill),
+    [icons, patternSize, iconSize, color, opacity, fill]
+  );
+
+  if (!url) return null;
+
+  return (
+    <div
+      className="w-full h-16 rounded border"
+      style={{
+        backgroundImage: `url("${url}")`,
+        backgroundRepeat: "repeat",
+        backgroundSize: `${patternSize}px ${patternSize}px`,
+      }}
+    />
+  );
+}
+
+// ── Pattern Layer Editor ────────────────────────────────────────
+
+function PatternLayerEditor({
   layer,
   index,
   onUpdate,
-  onRemove,
 }: {
   layer: BackgroundLayerItemType;
   index: number;
   onUpdate: (index: number, updates: Partial<BackgroundLayerItemType>) => void;
-  onRemove: (index: number) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: layer.id });
+  const pattern = layer.pattern || {
+    type: "pattern" as const,
+    icons: [],
+    color: "#ffffff",
+    opacity: 15,
+    iconSize: 24,
+    patternSize: 60,
+    fill: "solid" as const,
+  };
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+  const updatePattern = (updates: Partial<typeof pattern>) => {
+    onUpdate(index, { pattern: { ...pattern, ...updates } });
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="border rounded-md p-3 bg-background space-y-2"
-    >
-      {/* Header: drag handle + type + controls */}
+    <div className="space-y-3 mt-2">
+      {/* Emoji auto-detect */}
+      <EmojiPatternGenerator
+        onGenerate={(icons) => updatePattern({ icons })}
+      />
+
+      {/* Manual icon list */}
+      {pattern.icons.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs">Icons ({pattern.icons.length})</Label>
+          <div className="flex flex-wrap gap-1">
+            {pattern.icons.map((icon, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary text-xs"
+              >
+                {icon.emoji}
+                <button
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    const newIcons = pattern.icons.filter((_, j) => j !== i);
+                    updatePattern({ icons: newIcons });
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Color */}
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-
-        <LayerTypeIcon type={layer.type} />
-
-        <span className="text-sm font-medium flex-1 capitalize">
-          Layer {index + 1} · {layer.type}
-        </span>
-
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground"
-          onClick={() => onUpdate(index, { visible: !layer.visible })}
-        >
-          {layer.visible ? (
-            <Eye className="h-4 w-4" />
-          ) : (
-            <EyeOff className="h-4 w-4" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={() => onRemove(index)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <Label className="text-xs w-16">Color</Label>
+        <div className="flex items-center gap-1 flex-1">
+          <input
+            type="color"
+            value={pattern.color}
+            onChange={(e) => updatePattern({ color: e.target.value })}
+            className="w-8 h-8 rounded cursor-pointer"
+          />
+          <Input
+            value={pattern.color}
+            onChange={(e) => updatePattern({ color: e.target.value })}
+            className="h-8 text-xs flex-1"
+          />
+        </div>
       </div>
 
-      {/* Opacity slider */}
+      {/* Fill mode */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground w-14">Opacity</span>
+        <Label className="text-xs w-16">Style</Label>
+        <div className="flex gap-1 flex-1">
+          <Button
+            size="sm"
+            variant={pattern.fill === "solid" ? "default" : "outline"}
+            className="h-7 flex-1 text-xs"
+            onClick={() => updatePattern({ fill: "solid" })}
+          >
+            <Paintbrush className="w-3 h-3 mr-1" />
+            Solid
+          </Button>
+          <Button
+            size="sm"
+            variant={pattern.fill === "outline" ? "default" : "outline"}
+            className="h-7 flex-1 text-xs"
+            onClick={() => updatePattern({ fill: "outline" })}
+          >
+            <Palette className="w-3 h-3 mr-1" />
+            Outline
+          </Button>
+        </div>
+      </div>
+
+      {/* Opacity */}
+      <div className="flex items-center gap-2">
+        <Label className="text-xs w-16">Opacity</Label>
         <Slider
-          value={[layer.opacity]}
-          onValueChange={([val]) => onUpdate(index, { opacity: val })}
+          value={[pattern.opacity]}
+          onValueChange={([v]) => updatePattern({ opacity: v })}
+          min={1}
           max={100}
           step={1}
           className="flex-1"
         />
-        <span className="text-xs text-muted-foreground w-8 text-right">
-          {layer.opacity}%
-        </span>
+        <span className="text-xs w-8 text-right">{pattern.opacity}%</span>
       </div>
 
-      {/* Type-specific editor */}
-      {layer.type === "color" && (
-        <ColorLayerEditor layer={layer} index={index} onUpdate={onUpdate} />
-      )}
-      {layer.type === "gradient" && (
-        <GradientLayerEditor layer={layer} index={index} onUpdate={onUpdate} />
-      )}
-      {layer.type === "image" && (
-        <ImageLayerEditor layer={layer} index={index} onUpdate={onUpdate} />
+      {/* Icon size */}
+      <div className="flex items-center gap-2">
+        <Label className="text-xs w-16">Icon Size</Label>
+        <Slider
+          value={[pattern.iconSize]}
+          onValueChange={([v]) => updatePattern({ iconSize: v })}
+          min={8}
+          max={120}
+          step={2}
+          className="flex-1"
+        />
+        <span className="text-xs w-8 text-right">{pattern.iconSize}px</span>
+      </div>
+
+      {/* Pattern density */}
+      <div className="flex items-center gap-2">
+        <Label className="text-xs w-16">Density</Label>
+        <Slider
+          value={[pattern.patternSize]}
+          onValueChange={([v]) => updatePattern({ patternSize: v })}
+          min={20}
+          max={200}
+          step={5}
+          className="flex-1"
+        />
+        <span className="text-xs w-8 text-right">{pattern.patternSize}px</span>
+      </div>
+
+      {/* Preview */}
+      {pattern.icons.length > 0 && (
+        <PatternPreview
+          icons={pattern.icons}
+          color={pattern.color}
+          opacity={pattern.opacity}
+          iconSize={pattern.iconSize}
+          patternSize={pattern.patternSize}
+          fill={pattern.fill}
+        />
       )}
     </div>
   );
 }
 
-function LayerTypeIcon({ type }: { type: string }) {
-  if (type === "color") return <Palette className="h-4 w-4 text-blue-500" />;
-  if (type === "gradient") return <Layers className="h-4 w-4 text-purple-500" />;
-  if (type === "image") return <ImageIcon className="h-4 w-4 text-green-500" />;
-  return null;
-}
-
-function ColorLayerEditor({
-  layer,
-  index,
-  onUpdate,
-}: {
-  layer: BackgroundLayerItemType;
-  index: number;
-  onUpdate: (index: number, updates: Partial<BackgroundLayerItemType>) => void;
-}) {
-  return (
-    <div className="flex gap-2 items-center">
-      <input
-        type="color"
-        value={layer.color || "#000000"}
-        onChange={(e) => onUpdate(index, { color: e.target.value })}
-        className="w-10 h-8 p-1 cursor-pointer rounded border"
-      />
-      <Input
-        value={layer.color || "#000000"}
-        onChange={(e) => onUpdate(index, { color: e.target.value })}
-        placeholder="#000000"
-        className="flex-1 h-8 text-xs"
-      />
-    </div>
-  );
-}
-
-const GRADIENT_DIRECTIONS = [
-  { value: "to right", label: "→ Right" },
-  { value: "to left", label: "← Left" },
-  { value: "to bottom", label: "↓ Down" },
-  { value: "to top", label: "↑ Up" },
-  { value: "to bottom right", label: "↘ Diagonal" },
-  { value: "to bottom left", label: "↙ Diagonal" },
-  { value: "135deg", label: "↗ 135°" },
-  { value: "radial", label: "◎ Radial" },
-];
+// ── Gradient Layer Editor ───────────────────────────────────────
 
 function GradientLayerEditor({
   layer,
@@ -193,8 +312,8 @@ function GradientLayerEditor({
     type: "gradient" as const,
     direction: "to right",
     stops: [
-      { color: "#ff6b6b", position: 0, opacity: 100 },
-      { color: "#48dbfb", position: 100, opacity: 100 },
+      { color: "#ff0000", position: 0, opacity: 100 },
+      { color: "#0000ff", position: 100, opacity: 100 },
     ],
   };
 
@@ -224,284 +343,287 @@ function GradientLayerEditor({
     });
   };
 
-  // Build preview CSS
   const previewStops = gradient.stops
-    .map((s) => {
-      const r = parseInt(s.color.slice(1, 3), 16);
-      const g = parseInt(s.color.slice(3, 5), 16);
-      const b = parseInt(s.color.slice(5, 7), 16);
-      const a = (s.opacity ?? 100) / 100;
-      return `rgba(${r}, ${g}, ${b}, ${a}) ${s.position}%`;
-    })
+    .sort((a, b) => a.position - b.position)
+    .map((s) => `${s.color} ${s.position}%`)
     .join(", ");
+
   const previewCss =
     gradient.direction === "radial"
       ? `radial-gradient(circle, ${previewStops})`
       : `linear-gradient(${gradient.direction}, ${previewStops})`;
 
   return (
-    <div className="space-y-2">
-      {/* Preview bar */}
-      <div className="h-6 rounded border" style={{ backgroundImage: previewCss }} />
-
+    <div className="space-y-2 mt-2">
       {/* Direction */}
-      <select
-        value={gradient.direction}
-        onChange={(e) => updateGradient({ direction: e.target.value })}
-        className="w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs"
-      >
-        {GRADIENT_DIRECTIONS.map((d) => (
-          <option key={d.value} value={d.value}>
-            {d.label}
-          </option>
-        ))}
-      </select>
+      <div className="flex items-center gap-2">
+        <Label className="text-xs w-16">Direction</Label>
+        <Select
+          value={gradient.direction}
+          onValueChange={(e) => updateGradient({ direction: e.target.value })}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {GRADIENT_DIRECTIONS.map((d) => (
+              <SelectItem key={d.value} value={d.value}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* Stops */}
+      {/* Color stops */}
       {gradient.stops.map((stop, stopIndex) => (
-        <div key={stopIndex} className="flex gap-2 items-center">
+        <div key={stopIndex} className="flex items-center gap-1">
           <input
             type="color"
             value={stop.color}
             onChange={(e) => updateStop(stopIndex, { color: e.target.value })}
-            className="w-8 h-7 p-1 cursor-pointer rounded border"
+            className="w-8 h-8 rounded cursor-pointer"
+          />
+          <Input
+            value={stop.color}
+            onChange={(e) => updateStop(stopIndex, { color: e.target.value })}
+            className="h-8 text-xs flex-1"
           />
           <Input
             type="number"
+            value={stop.position}
+            onChange={(e) => updateStop(stopIndex, { position: parseInt(e.target.value) || 0 })}
+            className="h-8 text-xs w-16"
             min={0}
             max={100}
-            value={stop.position}
-            onChange={(e) => updateStop(stopIndex, { position: Number(e.target.value) })}
-            className="w-14 h-7 text-xs"
-            placeholder="%"
           />
-          <div className="flex items-center gap-1 flex-1">
-            <span className="text-[10px] text-muted-foreground">A</span>
-            <Slider
-              value={[stop.opacity ?? 100]}
-              onValueChange={([val]) => updateStop(stopIndex, { opacity: val })}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-            <span className="text-[10px] text-muted-foreground w-6 text-right">
-              {stop.opacity ?? 100}%
-            </span>
-          </div>
           {gradient.stops.length > 2 && (
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-destructive"
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
               onClick={() => removeStop(stopIndex)}
             >
-              <Trash2 className="h-3 w-3" />
-            </button>
+              <Trash2 className="w-3 h-3" />
+            </Button>
           )}
         </div>
       ))}
 
       {gradient.stops.length < 5 && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs w-full"
-          onClick={addStop}
-        >
-          <Plus className="h-3 w-3 mr-1" /> Add Color Stop
+        <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={addStop}>
+          <Plus className="w-3 h-3 mr-1" /> Add Stop
         </Button>
       )}
+
+      {/* Preview */}
+      <div className="w-full h-8 rounded border" style={{ background: previewCss }} />
     </div>
   );
 }
 
-function ImageLayerEditor({
-  layer,
-  index,
-  onUpdate,
-}: {
-  layer: BackgroundLayerItemType;
-  index: number;
-  onUpdate: (index: number, updates: Partial<BackgroundLayerItemType>) => void;
-}) {
-  const image = layer.image || { src: "", fit: "cover" as const };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input
-          value={image.src}
-          onChange={(e) =>
-            onUpdate(index, { image: { ...image, src: e.target.value } })
-          }
-          placeholder="Image URL"
-          className="flex-1 h-8 text-xs"
-        />
-        <ImageUploadButton
-          onUpload={(dataUrl) =>
-            onUpdate(index, { image: { ...image, src: dataUrl } })
-          }
-        />
-      </div>
-      <select
-        value={image.fit}
-        onChange={(e) =>
-          onUpdate(index, {
-            image: { ...image, fit: e.target.value as "cover" | "contain" },
-          })
-        }
-        className="w-full h-8 rounded-md border border-input bg-transparent px-2 text-xs"
-      >
-        <option value="cover">Cover</option>
-        <option value="contain">Contain</option>
-      </select>
-      {image.src && (
-        <div className="h-16 rounded border overflow-hidden">
-          <img
-            alt=""
-            src={image.src}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-      {!image.src && (
-        <ImageUploadButton
-          variant="dropzone"
-          onUpload={(dataUrl) =>
-            onUpdate(index, { image: { ...image, src: dataUrl } })
-          }
-          className="h-20"
-        />
-      )}
-    </div>
-  );
-}
+// ── Main Background Layers Editor ───────────────────────────────
 
 export function BackgroundLayersEditor() {
   const form: DocumentFormReturn = useFormContext();
-  const { watch, setValue } = form;
-  const layers = watch("config.theme.backgroundLayers") || [];
+  const layers = form.watch("config.theme.backgroundLayers") || [];
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = layers.findIndex((l) => l.id === active.id);
-    const newIndex = layers.findIndex((l) => l.id === over.id);
-    const newLayers = arrayMove(layers, oldIndex, newIndex);
-    setValue("config.theme.backgroundLayers", newLayers);
+  const updateLayer = (index: number, updates: Partial<BackgroundLayerItemType>) => {
+    const newLayers = layers.map((layer, i) =>
+      i === index ? { ...layer, ...updates } : layer
+    );
+    form.setValue("config.theme.backgroundLayers", newLayers);
   };
 
-  const addLayer = (type: "color" | "gradient" | "image") => {
+  const removeLayer = (index: number) => {
+    form.setValue(
+      "config.theme.backgroundLayers",
+      layers.filter((_, i) => i !== index)
+    );
+  };
+
+  const toggleVisibility = (index: number) => {
+    updateLayer(index, { visible: !layers[index].visible });
+  };
+
+  const moveLayer = (index: number, direction: "up" | "down") => {
+    const newLayers = [...layers];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newLayers.length) return;
+    [newLayers[index], newLayers[targetIndex]] = [newLayers[targetIndex], newLayers[index]];
+    form.setValue("config.theme.backgroundLayers", newLayers);
+  };
+
+  const addLayer = (type: "color" | "gradient" | "image" | "pattern") => {
+    const id = `layer-${Date.now()}`;
     const newLayer: BackgroundLayerItemType = {
-      id: generateId(),
+      id,
       type,
       opacity: 100,
       visible: true,
-      ...(type === "color" ? { color: LAYER_COLORS[layers.length % LAYER_COLORS.length] } : {}),
+      ...(type === "color" ? { color: "#000000" } : {}),
       ...(type === "gradient"
         ? {
             gradient: {
               type: "gradient",
               direction: "to right",
               stops: [
-                { color: "#ff6b6b", position: 0, opacity: 100 },
-                { color: "#48dbfb", position: 100, opacity: 100 },
+                { color: "#ff0000", position: 0, opacity: 100 },
+                { color: "#0000ff", position: 100, opacity: 100 },
               ],
             },
           }
         : {}),
-      ...(type === "image" ? { image: { src: "", fit: "cover" as const } } : {}),
+      ...(type === "pattern"
+        ? {
+            pattern: {
+              type: "pattern",
+              icons: [],
+              color: "#ffffff",
+              opacity: 15,
+              iconSize: 24,
+              patternSize: 60,
+              fill: "solid" as const,
+            },
+          }
+        : {}),
     };
-    setValue("config.theme.backgroundLayers", [...layers, newLayer]);
-  };
-
-  const updateLayer = (index: number, updates: Partial<BackgroundLayerItemType>) => {
-    const newLayers = layers.map((layer, i) =>
-      i === index ? { ...layer, ...updates } : layer
-    );
-    setValue("config.theme.backgroundLayers", newLayers);
-  };
-
-  const removeLayer = (index: number) => {
-    setValue(
-      "config.theme.backgroundLayers",
-      layers.filter((_, i) => i !== index)
-    );
+    form.setValue("config.theme.backgroundLayers", [...layers, newLayer]);
   };
 
   return (
     <div className="space-y-3">
-      <FormLabel className="text-base font-medium">Background Layers</FormLabel>
-      <p className="text-xs text-muted-foreground">
-        Stack layers to create complex backgrounds. Drag to reorder.
-      </p>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">Background Layers</Label>
+      </div>
 
-      {layers.length > 0 && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={layers.map((l) => l.id)}
-            strategy={verticalListSortingStrategy}
+      {/* Layer list */}
+      <div className="space-y-2">
+        {layers.map((layer, index) => (
+          <div
+            key={layer.id}
+            className="border rounded-md p-2 space-y-2 bg-card"
           >
-            <div className="space-y-2">
-              {layers.map((layer, index) => (
-                <SortableLayerItem
-                  key={layer.id}
-                  layer={layer}
-                  index={index}
-                  onUpdate={updateLayer}
-                  onRemove={removeLayer}
-                />
-              ))}
+            {/* Layer header */}
+            <div className="flex items-center gap-2">
+              <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+
+              {/* Type icon */}
+              {layer.type === "color" && <Paintbrush className="w-4 h-4 text-blue-500" />}
+              {layer.type === "gradient" && <Layers className="w-4 h-4 text-purple-500" />}
+              {layer.type === "image" && <ImageIcon className="w-4 h-4 text-green-500" />}
+              {layer.type === "pattern" && <Sparkles className="w-4 h-4 text-amber-500" />}
+
+              <span className="text-xs font-medium capitalize flex-1">
+                {layer.type}
+                {layer.type === "pattern" && layer.pattern?.icons?.length
+                  ? ` (${layer.pattern.icons.length} icons)`
+                  : ""}
+              </span>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0"
+                  onClick={() => moveLayer(index, "up")}
+                  disabled={index === 0}
+                >
+                  ↑
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0"
+                  onClick={() => moveLayer(index, "down")}
+                  disabled={index === layers.length - 1}
+                >
+                  ↓
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0"
+                  onClick={() => toggleVisibility(index)}
+                >
+                  {layer.visible ? (
+                    <Eye className="w-3 h-3" />
+                  ) : (
+                    <EyeOff className="w-3 h-3 text-muted-foreground" />
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-destructive"
+                  onClick={() => removeLayer(index)}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
             </div>
-          </SortableContext>
-        </DndContext>
-      )}
 
-      {layers.length === 0 && (
-        <div className="border border-dashed rounded-md p-4 text-center text-sm text-muted-foreground">
-          No layers. Add a layer below to get started.
-        </div>
-      )}
+            {/* Layer opacity */}
+            <div className="flex items-center gap-2">
+              <Label className="text-xs w-16">Opacity</Label>
+              <Slider
+                value={[layer.opacity]}
+                onValueChange={([v]) => updateLayer(index, { opacity: v })}
+                min={0}
+                max={100}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs w-8 text-right">{layer.opacity}%</span>
+            </div>
 
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="flex-1 h-8 text-xs"
-          onClick={() => addLayer("color")}
-        >
-          <Palette className="h-3 w-3 mr-1" /> Color
+            {/* Type-specific editor */}
+            {layer.type === "color" && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={layer.color || "#000000"}
+                  onChange={(e) => updateLayer(index, { color: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
+                <Input
+                  value={layer.color || "#000000"}
+                  onChange={(e) => updateLayer(index, { color: e.target.value })}
+                  className="h-8 text-xs flex-1"
+                />
+              </div>
+            )}
+
+            {layer.type === "gradient" && (
+              <GradientLayerEditor layer={layer} index={index} onUpdate={updateLayer} />
+            )}
+
+            {layer.type === "pattern" && (
+              <PatternLayerEditor layer={layer} index={index} onUpdate={updateLayer} />
+            )}
+
+            {layer.type === "image" && (
+              <div className="text-xs text-muted-foreground">
+                Image: {layer.image?.src ? "Set" : "Not set"}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add layer buttons */}
+      <div className="grid grid-cols-2 gap-1">
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => addLayer("color")}>
+          <Paintbrush className="w-3 h-3 mr-1" /> Color
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="flex-1 h-8 text-xs"
-          onClick={() => addLayer("gradient")}
-        >
-          <Layers className="h-3 w-3 mr-1" /> Gradient
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => addLayer("gradient")}>
+          <Layers className="w-3 h-3 mr-1" /> Gradient
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="flex-1 h-8 text-xs"
-          onClick={() => addLayer("image")}
-        >
-          <ImageIcon className="h-3 w-3 mr-1" /> Image
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => addLayer("pattern")}>
+          <Sparkles className="w-3 h-3 mr-1" /> Pattern
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => addLayer("image")}>
+          <ImageIcon className="w-3 h-3 mr-1" /> Image
         </Button>
       </div>
     </div>
