@@ -13,6 +13,12 @@ interface GradientTextareaProps
  * Textarea with gradient/texture support via a wrapper div.
  * When gradientStyle is provided, it renders a visual layer
  * that clips to the text shape using background-clip: text.
+ *
+ * Structure:
+ *   div.relative (container)
+ *     div.absolute (gradient overlay, pointer-events: none)
+ *       TextareaAutosize (readonly mirror — same content, clipped background)
+ *     TextareaAutosize (actual editable — transparent text, visible caret)
  */
 const GradientTextarea = React.forwardRef<
   HTMLTextAreaElement,
@@ -21,7 +27,7 @@ const GradientTextarea = React.forwardRef<
   const hasGradient = gradientStyle && Object.keys(gradientStyle).length > 0;
 
   if (hasGradient) {
-    // Extract gradient-related properties for the wrapper
+    // Extract gradient-related properties for the overlay
     const {
       backgroundImage,
       backgroundSize,
@@ -33,8 +39,9 @@ const GradientTextarea = React.forwardRef<
 
     return (
       <div className="w-full relative">
+        {/* Gradient/texture overlay — clips to text shape */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none overflow-hidden"
           style={{
             backgroundImage,
             backgroundSize: backgroundSize || "cover",
@@ -45,7 +52,7 @@ const GradientTextarea = React.forwardRef<
             WebkitTextFillColor: "transparent",
             opacity: opacity ?? 1,
             mixBlendMode: mixBlendMode as React.CSSProperties["mixBlendMode"],
-            // Inherit text properties from the textarea
+            // Mirror text properties exactly from the editable textarea
             fontFamily: style?.fontFamily,
             fontSize: style?.fontSize,
             fontWeight: style?.fontWeight,
@@ -53,20 +60,35 @@ const GradientTextarea = React.forwardRef<
             letterSpacing: style?.letterSpacing,
             textAlign: style?.textAlign,
             padding: 0,
+            margin: 0,
+            border: "none",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
           }}
         >
-          {/* Mirror the textarea content */}
+          {/* Mirror content — readonly, same text, clipped background */}
           <TextareaAutosize
             {...props}
             readOnly
             tabIndex={-1}
+            aria-hidden="true"
             className={cn(
               "w-full bg-transparent overflow-hidden resize-none p-0 border-0 outline-none",
               className
             )}
-            style={{ color: "inherit", WebkitTextFillColor: "inherit" }}
+            style={{
+              color: "inherit",
+              WebkitTextFillColor: "inherit",
+              fontFamily: "inherit",
+              fontSize: "inherit",
+              fontWeight: "inherit",
+              lineHeight: "inherit",
+              letterSpacing: "inherit",
+              textAlign: "inherit",
+            }}
           />
         </div>
+        {/* Actual editable textarea — transparent text, visible caret */}
         <TextareaAutosize
           {...props}
           ref={ref}

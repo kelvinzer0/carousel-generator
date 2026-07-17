@@ -33,6 +33,7 @@ export function getTextStyleCSS(style?: TextStyleType): React.CSSProperties {
       WebkitTextFillColor: "transparent",
       backgroundSize: "cover",
       backgroundPosition: "center",
+      backgroundRepeat: "repeat",
       opacity: style.texture.opacity / 100,
       mixBlendMode: style.texture.blend as React.CSSProperties["mixBlendMode"],
     };

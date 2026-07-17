@@ -8,7 +8,7 @@ import { Options as HtmlToImageOptions } from "html-to-image/lib/types";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { prerenderGradientText } from "@/lib/prerender-gradient-text";
+import { prerenderGradientText, preloadTextures } from "@/lib/prerender-gradient-text";
 
 export type ExportImageFormat = "png" | "webp" | "jpeg";
 
@@ -79,7 +79,8 @@ async function captureSlideToDataUrl(
 ): Promise<string> {
   // Hide UI elements before capture
   const restoreUI = hideUIElements(slideElement);
-  // Pre-render gradient text to canvas for export
+  // Pre-load texture images, then pre-render gradient text to canvas
+  await preloadTextures(slideElement);
   const restoreGradient = prerenderGradientText(slideElement);
 
   const options: HtmlToImageOptions = {
