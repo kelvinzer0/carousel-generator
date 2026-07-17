@@ -2,7 +2,7 @@ import React from "react";
 import * as z from "zod";
 import { ConfigSchema } from "@/lib/validation/document-schema";
 import { cn } from "@/lib/utils";
-import { fontIdToClassName } from "@/lib/fonts-map";
+import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { TitleSchema } from "@/lib/validation/text-schema";
 import { textStyleToClasses } from "@/lib/text-style-to-classes";
 import { useFormContext } from "react-hook-form";
@@ -31,6 +31,7 @@ export function Title({
   ) as TextFieldStyle;
   const textFieldName = (fieldName + ".text") as TextTextFieldPath;
 
+  const fontFamily = useGoogleFont(config.fonts.font1);
   const primaryStyle = config.theme.primaryStyle;
   const hasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
 
@@ -46,14 +47,14 @@ export function Title({
           style: style,
           sizes: ["text-7xl", "text-5xl", "text-3xl"],
         }),
-        fontIdToClassName(config.fonts.font1),
         className
       )}
-      style={
-        hasGradientTexture
+      style={{
+        fontFamily,
+        ...(hasGradientTexture
           ? getTextStyleCSS(primaryStyle)
-          : { color: config.theme.primary }
-      }
+          : { color: config.theme.primary }),
+      }}
     />
   );
 }

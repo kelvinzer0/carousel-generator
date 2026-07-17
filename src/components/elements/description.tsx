@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { fontIdToClassName } from "@/lib/fonts-map";
+import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { textStyleToClasses } from "@/lib/text-style-to-classes";
 import { useFormContext } from "react-hook-form";
 import { TextAreaFormField } from "@/components/forms/fields/text-area-form-field";
@@ -28,6 +28,7 @@ export function Description({
   ) as TextFieldStyle;
   const textFieldName = (fieldName + ".text") as TextTextFieldPath;
 
+  const fontFamily = useGoogleFont(config.fonts.font2);
   const secondaryStyle = config.theme.secondaryStyle;
   const hasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
 
@@ -43,14 +44,14 @@ export function Description({
           style: style,
           sizes: ["text-xl", "text-lg", "text-base"],
         }),
-        fontIdToClassName(config.fonts.font2),
         className
       )}
-      style={
-        hasGradientTexture
+      style={{
+        fontFamily,
+        ...(hasGradientTexture
           ? getTextStyleCSS(secondaryStyle)
-          : { color: config.theme.secondary }
-      }
+          : { color: config.theme.secondary }),
+      }}
     />
   );
 }

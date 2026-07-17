@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { fontIdToClassName } from "@/lib/fonts-map";
+import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { textStyleToClasses } from "@/lib/text-style-to-classes";
 import { useFormContext } from "react-hook-form";
 import {
@@ -27,6 +27,7 @@ export function Subtitle({
   ) as TextFieldStyle;
   const textFieldName = (fieldName + ".text") as TextTextFieldPath;
 
+  const fontFamily = useGoogleFont(config.fonts.font1);
   const secondaryStyle = config.theme.secondaryStyle;
   const hasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
 
@@ -42,14 +43,14 @@ export function Subtitle({
           style: style,
           sizes: ["text-3xl", "text-2xl", "text-xl"],
         }),
-        fontIdToClassName(config.fonts.font1),
         className
       )}
-      style={
-        hasGradientTexture
+      style={{
+        fontFamily,
+        ...(hasGradientTexture
           ? getTextStyleCSS(secondaryStyle)
-          : { color: config.theme.secondary }
-      }
+          : { color: config.theme.secondary }),
+      }}
     />
   );
 }

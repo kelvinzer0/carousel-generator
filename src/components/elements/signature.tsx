@@ -2,7 +2,7 @@ import React from "react";
 import { ConfigSchema, DocumentSchema } from "@/lib/validation/document-schema";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
-import { fontIdToClassName } from "@/lib/fonts-map";
+import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { getTextStyleCSS } from "@/lib/text-style-css";
 
 export function Signature({
@@ -12,6 +12,7 @@ export function Signature({
   config: z.infer<typeof ConfigSchema>;
   className?: string;
 }) {
+  const fontFamily = useGoogleFont(config.fonts.font2);
   const primaryStyle = config.theme.primaryStyle;
   const secondaryStyle = config.theme.secondaryStyle;
   const primaryHasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
@@ -36,25 +37,24 @@ export function Signature({
       )}
       <div className={`flex items-start flex-col`}>
         <p
-          className={cn(`text-base`, fontIdToClassName(config.fonts.font2))}
-          style={
-            primaryHasGradientTexture
+          className={cn(`text-base`)}
+          style={{
+            fontFamily,
+            ...(primaryHasGradientTexture
               ? getTextStyleCSS(primaryStyle)
-              : { color: config.theme.primary }
-          }
+              : { color: config.theme.primary }),
+          }}
         >
           {config.brand.name}
         </p>
         <p
-          className={cn(
-            `text-sm font-normal`,
-            fontIdToClassName(config.fonts.font2)
-          )}
-          style={
-            secondaryHasGradientTexture
+          className={cn(`text-sm font-normal`)}
+          style={{
+            fontFamily,
+            ...(secondaryHasGradientTexture
               ? getTextStyleCSS(secondaryStyle)
-              : { color: config.theme.secondary }
-          }
+              : { color: config.theme.secondary }),
+          }}
         >
           {config.brand.handle}
         </p>
