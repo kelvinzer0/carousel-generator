@@ -15,6 +15,7 @@ import imageCompression from "browser-image-compression";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { ImageInputType } from "@/lib/validation/image-schema";
 import { useEffect, useState } from "react";
+import { PixabaySearch } from "@/components/pixabay-search";
 
 export const MAX_IMAGE_SIZE_MB = 0.5; // Set your maximum image size limit in megabytes
 export const MAX_IMAGE_WIDTH = 800; // Set your maximum image width
@@ -44,9 +45,10 @@ export function ImageSourceFormField({
       defaultValue={tabValue}
       className="w-full"
     >
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value={ImageInputType.Url}>URL</TabsTrigger>
         <TabsTrigger value={ImageInputType.Upload}>Upload</TabsTrigger>
+        <TabsTrigger value={ImageInputType.Pixabay}>Pixabay</TabsTrigger>
       </TabsList>
       <TabsContent value={ImageInputType.Url}>
         <FormField
@@ -112,6 +114,13 @@ export function ImageSourceFormField({
                 <FormMessage />
               </FormItem>
             );
+          }}
+        />
+      </TabsContent>
+    <TabsContent value={ImageInputType.Pixabay}>
+        <PixabaySearch
+          onSelect={(imageUrl) => {
+            form.setValue(fieldName, { type: ImageInputType.Pixabay, src: imageUrl });
           }}
         />
       </TabsContent>
