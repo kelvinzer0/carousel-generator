@@ -6,206 +6,178 @@
 export interface EmojiMapping {
   emoji: string;
   name: string;
-  faClass: string; // e.g., "fa-heart" → "heart"
-  unicode: string;
+  faClass: string; // FA CSS class name (e.g., "fa-heart")
+  unicode: string; // FA unicode char
 }
 
 // Emoji → FA mapping (curated top 100+)
 const EMOJI_MAP: Record<string, Omit<EmojiMapping, "emoji">> = {
-  "❤️": { name: "heart", faClass: "heart", unicode: "\uf004" },
-  "🔥": { name: "fire", faClass: "fire", unicode: "\uf06d" },
-  "⭐": { name: "star", faClass: "star", unicode: "\uf005" },
-  "✨": { name: "sparkles", faClass: "star", unicode: "\uf005" },
-  "⚡": { name: "zap", faClass: "bolt", unicode: "\uf0e7" },
-  "💎": { name: "gem", faClass: "gem", unicode: "\uf3a5" },
-  "👑": { name: "crown", faClass: "crown", unicode: "\uf521" },
-  "🏆": { name: "trophy", faClass: "trophy", unicode: "\uf091" },
-  "🎯": { name: "dart", faClass: "bullseye", unicode: "\uf140" },
-  "🚀": { name: "rocket", faClass: "rocket", unicode: "\uf135" },
-  "💡": { name: "bulb", faClass: "lightbulb", unicode: "\uf0eb" },
-  "🔑": { name: "key", faClass: "key", unicode: "\uf084" },
-  "🔒": { name: "lock", faClass: "lock", unicode: "\uf023" },
-  "🔗": { name: "link", faClass: "link", unicode: "\uf0c1" },
-  "📌": { name: "pin", faClass: "thumbtack", unicode: "\uf08d" },
-  "💰": { name: "money", faClass: "sack-dollar", unicode: "\uf81d" },
-  "📊": { name: "chart", faClass: "chart-bar", unicode: "\uf080" },
-  "📈": { name: "chart-up", faClass: "chart-line", unicode: "\uf201" },
-  "🎨": { name: "art", faClass: "palette", unicode: "\uf53f" },
-  "✏️": { name: "pencil", faClass: "pencil", unicode: "\uf303" },
-  "📝": { name: "memo", faClass: "pen-to-square", unicode: "\uf044" },
-  "📖": { name: "book", faClass: "book", unicode: "\uf02d" },
-  "💬": { name: "speech", faClass: "comment", unicode: "\uf075" },
-  "📢": { name: "megaphone", faClass: "bullhorn", unicode: "\uf0a1" },
-  "🔔": { name: "bell", faClass: "bell", unicode: "\uf0f3" },
-  "🎁": { name: "gift", faClass: "gift", unicode: "\uf06b" },
-  "🛒": { name: "cart", faClass: "cart-shopping", unicode: "\uf07a" },
-  "🏠": { name: "house", faClass: "house", unicode: "\uf015" },
-  "💻": { name: "laptop", faClass: "laptop", unicode: "\uf109" },
-  "📱": { name: "mobile", faClass: "mobile", unicode: "\uf10b" },
-  "⚙️": { name: "gear", faClass: "gear", unicode: "\uf013" },
-  "🔧": { name: "wrench", faClass: "wrench", unicode: "\uf0ad" },
-  "🔨": { name: "hammer", faClass: "hammer", unicode: "\uf6e3" },
-  "✅": { name: "check", faClass: "circle-check", unicode: "\uf058" },
-  "❌": { name: "cross", faClass: "circle-xmark", unicode: "\uf057" },
-  "⚠️": { name: "warning", faClass: "triangle-exclamation", unicode: "\uf071" },
-  "❗": { name: "exclamation", faClass: "exclamation", unicode: "\uf12a" },
-  "❓": { name: "question", faClass: "question", unicode: "\uf128" },
-  "💯": { name: "100", faClass: "hundred-points", unicode: "\uf896" },
-  "👍": { name: "thumbs-up", faClass: "thumbs-up", unicode: "\uf164" },
-  "👎": { name: "thumbs-down", faClass: "thumbs-down", unicode: "\uf165" },
-  "👏": { name: "clap", faClass: "hands-clapping", unicode: "\uf817" },
-  "🙏": { name: "pray", faClass: "hands-praying", unicode: "\uf684" },
-  "💪": { name: "muscle", faClass: "hand-fist", unicode: "\uf6de" },
-  "🤝": { name: "handshake", faClass: "handshake", unicode: "\uf2b5" },
-  "😀": { name: "grinning", faClass: "face-smile", unicode: "\uf581" },
-  "😂": { name: "joy", faClass: "face-laugh-beam", unicode: "\uf59b" },
-  "😍": { name: "heart-eyes", faClass: "face-heart-eyes", unicode: "\uf7df" },
-  "🤔": { name: "thinking", faClass: "face-thinking", unicode: "\uf5c4" },
-  "😎": { name: "cool", faClass: "face-smile", unicode: "\uf581" },
-  "😢": { name: "cry", faClass: "face-sad-tear", unicode: "\uf5b4" },
-  "😡": { name: "angry", faClass: "face-angry", unicode: "\uf556" },
-  "💀": { name: "skull", faClass: "skull", unicode: "\uf54c" },
-  "👻": { name: "ghost", faClass: "ghost", unicode: "\uf6e2" },
-  "🤖": { name: "robot", faClass: "robot", unicode: "\uf544" },
-  "🐶": { name: "dog", faClass: "dog", unicode: "\uf6d3" },
-  "🐱": { name: "cat", faClass: "cat", unicode: "\uf6c0" },
-  "🦊": { name: "fox", faClass: "fox", unicode: "\uf813" },
-  "🦁": { name: "lion", faClass: "cat", unicode: "\uf6c0" },
-  "🐸": { name: "frog", faClass: "frog", unicode: "\uf6e8" },
-  "🐝": { name: "bee", faClass: "bug", unicode: "\uf188" },
-  "🦋": { name: "butterfly", faClass: "bug", unicode: "\uf188" },
-  "🌸": { name: "blossom", faClass: "seedling", unicode: "\uf4d8" },
-  "🌺": { name: "hibiscus", faClass: "seedling", unicode: "\uf4d8" },
-  "🌹": { name: "rose", faClass: "seedling", unicode: "\uf4d8" },
-  "🌿": { name: "herb", faClass: "leaf", unicode: "\uf06c" },
-  "🍀": { name: "four-leaf", faClass: "leaf", unicode: "\uf06c" },
-  "🍁": { name: "maple", faClass: "leaf", unicode: "\uf06c" },
-  "🌴": { name: "palm", faClass: "tree-palm", unicode: "\uf82b" },
-  "🌳": { name: "tree", faClass: "tree", unicode: "\uf1bb" },
-  "🍎": { name: "apple", faClass: "apple-whole", unicode: "\uf5d1" },
-  "🍕": { name: "pizza", faClass: "pizza-slice", unicode: "\uf818" },
-  "🍔": { name: "burger", faClass: "burger", unicode: "\uf805" },
-  "☕": { name: "coffee", faClass: "mug-hot", unicode: "\uf7b6" },
-  "🍺": { name: "beer", faClass: "beer-mug-empty", unicode: "\uf0fc" },
-  "🍷": { name: "wine", faClass: "wine-glass", unicode: "\uf4e3" },
-  "⚽": { name: "soccer", faClass: "futbol", unicode: "\uf1e3" },
-  "🏀": { name: "basketball", faClass: "basketball", unicode: "\uf434" },
-  "🎮": { name: "gamepad", faClass: "gamepad", unicode: "\uf11b" },
-  "🎲": { name: "dice", faClass: "dice", unicode: "\uf522" },
-  "🎵": { name: "music", faClass: "music", unicode: "\uf001" },
-  "🎸": { name: "guitar", faClass: "guitar", unicode: "\uf7a6" },
-  "🎤": { name: "mic", faClass: "microphone", unicode: "\uf130" },
-  "🎧": { name: "headphones", faClass: "headphones", unicode: "\uf025" },
-  "🎬": { name: "clapper", faClass: "clapperboard", unicode: "\uf846" },
-  "✈️": { name: "airplane", faClass: "plane", unicode: "\uf072" },
-  "🚗": { name: "car", faClass: "car", unicode: "\uf1b9" },
-  "⛵": { name: "sailboat", faClass: "sailboat", unicode: "\uf844" },
-  "⚓": { name: "anchor", faClass: "anchor", unicode: "\uf13d" },
-  "🌍": { name: "globe", faClass: "globe", unicode: "\uf0ac" },
-  "☀️": { name: "sun", faClass: "sun", unicode: "\uf185" },
-  "🌙": { name: "moon", faClass: "moon", unicode: "\uf186" },
-  "🌈": { name: "rainbow", faClass: "rainbow", unicode: "\uf8bc" },
-  "❄️": { name: "snowflake", faClass: "snowflake", unicode: "\uf2dc" },
-  "🌊": { name: "wave", faClass: "water", unicode: "\uf773" },
-  "💧": { name: "droplet", faClass: "droplet", unicode: "\uf043" },
-  "♻️": { name: "recycle", faClass: "recycle", unicode: "\uf1b8" },
-  "🚩": { name: "flag", faClass: "flag", unicode: "\uf024" },
-  "🎉": { name: "party", faClass: "champagne-glass", unicode: "\uf79e" },
-  "🎊": { name: "confetti", faClass: "champagne-glass", unicode: "\uf79e" },
-  "🎀": { name: "ribbon", faClass: "ribbon", unicode: "\uf837" },
-  "🔴": { name: "red-circle", faClass: "circle", unicode: "\uf111" },
-  "🟢": { name: "green-circle", faClass: "circle", unicode: "\uf111" },
-  "🔵": { name: "blue-circle", faClass: "circle", unicode: "\uf111" },
-  "🌟": { name: "glowing-star", faClass: "star", unicode: "\uf005" },
-  "💫": { name: "dizzy", faClass: "star", unicode: "\uf005" },
-  "💥": { name: "boom", faClass: "explosion", unicode: "\uf666" },
-  "💢": { name: "anger", faClass: "burst", unicode: "\uf633" },
-  "💤": { name: "zzz", faClass: "zzz", unicode: "\uf880" },
-  "👁️": { name: "eye", faClass: "eye", unicode: "\uf06e" },
-  "🧠": { name: "brain", faClass: "brain", unicode: "\uf5dc" },
-  "🧸": { name: "teddy", faClass: "bear", unicode: "\uf812" },
-  "🧩": { name: "puzzle", faClass: "puzzle-piece", unicode: "\uf12e" },
-  "🎭": { name: "theater", faClass: "masks-theater", unicode: "\uf630" },
-  "📅": { name: "calendar", faClass: "calendar", unicode: "\uf133" },
-  "✉️": { name: "envelope", faClass: "envelope", unicode: "\uf0e0" },
-  "📞": { name: "phone", faClass: "phone", unicode: "\uf095" },
-  "🔌": { name: "plug", faClass: "plug", unicode: "\uf1e6" },
-  "🔋": { name: "battery", faClass: "battery-full", unicode: "\uf240" },
-  "📷": { name: "camera", faClass: "camera", unicode: "\uf030" },
-  "💾": { name: "floppy", faClass: "floppy-disk", unicode: "\uf0c7" },
-  "🖨️": { name: "printer", faClass: "print", unicode: "\uf02f" },
-  "🏷️": { name: "tag", faClass: "tag", unicode: "\uf02b" },
-  "📦": { name: "package", faClass: "box", unicode: "\uf466" },
-  "🛡️": { name: "shield", faClass: "shield", unicode: "\uf132" },
-  "⚖️": { name: "scales", faClass: "scale-balanced", unicode: "\uf24e" },
-  "🧲": { name: "magnet", faClass: "magnet", unicode: "\uf076" },
-  "🏅": { name: "medal", faClass: "medal", unicode: "\uf5a2" },
-  "🥇": { name: "gold", faClass: "medal", unicode: "\uf5a2" },
-  "💡": { name: "idea", faClass: "lightbulb", unicode: "\uf0eb" },
-  "📣": { name: "megaphone2", faClass: "bullhorn", unicode: "\uf0a1" },
-  "❤️": { name: "love", faClass: "heart", unicode: "\uf004" },
-  "💔": { name: "broken-heart", faClass: "heart-crack", unicode: "\uf7a9" },
-  "❣️": { name: "heart-exclaim", faClass: "heart", unicode: "\uf004" },
-  "💕": { name: "two-hearts", faClass: "heart", unicode: "\uf004" },
-  "💖": { name: "sparkling-heart", faClass: "heart", unicode: "\uf004" },
-  "💗": { name: "growing-heart", faClass: "heart", unicode: "\uf004" },
-  "💘": { name: "heart-arrow", faClass: "heart", unicode: "\uf004" },
-  "💝": { name: "heart-ribbon", faClass: "heart", unicode: "\uf004" },
-  "♥️": { name: "heart-suit", faClass: "heart", unicode: "\uf004" },
-  "👆": { name: "up", faClass: "hand-point-up", unicode: "\uf0a6" },
-  "👇": { name: "down", faClass: "hand-point-down", unicode: "\uf0a7" },
-  "👉": { name: "right", faClass: "hand-point-right", unicode: "\uf0a4" },
-  "👈": { name: "left", faClass: "hand-point-left", unicode: "\uf0a5" },
-  "✌️": { name: "peace", faClass: "hand-peace", unicode: "\uf25b" },
-  "🤞": { name: "crossed-fingers", faClass: "hand-scissors", unicode: "\uf257" },
-  "👋": { name: "wave2", faClass: "hand", unicode: "\uf256" },
-  "✊": { name: "fist", faClass: "fist-raised", unicode: "\uf6de" },
-  "👊": { name: "punch", faClass: "fist-raised", unicode: "\uf6de" },
-  "🙌": { name: "raised-hands", faClass: "hands", unicode: "\uf255" },
-  "🌍": { name: "earth", faClass: "globe", unicode: "\uf0ac" },
-  "🌎": { name: "earth2", faClass: "globe", unicode: "\uf0ac" },
-  "🌏": { name: "earth3", faClass: "globe", unicode: "\uf0ac" },
-  "🪐": { name: "saturn", faClass: "globe", unicode: "\uf0ac" },
-  "💫": { name: "star2", faClass: "star", unicode: "\uf005" },
-  "🌪️": { name: "tornado", faClass: "wind", unicode: "\uf72e" },
-  "🔥": { name: "fire2", faClass: "fire", unicode: "\uf06d" },
-  "💥": { name: "collision2", faClass: "explosion", unicode: "\uf666" },
-  "☀️": { name: "sun2", faClass: "sun", unicode: "\uf185" },
-  "🌤️": { name: "sun-cloud", faClass: "cloud-sun", unicode: "\uf6c4" },
-  "☁️": { name: "cloud", faClass: "cloud", unicode: "\uf0c2" },
-  "🌧️": { name: "rain", faClass: "cloud-rain", unicode: "\uf73d" },
-  "⛈️": { name: "thunderstorm", faClass: "cloud-bolt", unicode: "\uf76c" },
-  "🌩️": { name: "lightning", faClass: "bolt", unicode: "\uf0e7" },
-  "☃️": { name: "snowman", faClass: "snowflake", unicode: "\uf2dc" },
-  "⛄": { name: "snowman2", faClass: "snowflake", unicode: "\uf2dc" },
-  "🌊": { name: "ocean", faClass: "water", unicode: "\uf773" },
-  "💧": { name: "drop", faClass: "droplet", unicode: "\uf043" },
-  "🫧": { name: "bubbles", faClass: "droplet", unicode: "\uf043" },
-  "👁️‍🗨️": { name: "eye-speech", faClass: "eye", unicode: "\uf06e" },
-  "💬": { name: "comment", faClass: "comment", unicode: "\uf075" },
-  "🗯️": { name: "anger-speech", faClass: "comment", unicode: "\uf075" },
-  "💭": { name: "thought", faClass: "comment", unicode: "\uf075" },
-  "🔴": { name: "red", faClass: "circle", unicode: "\uf111" },
-  "🟠": { name: "orange", faClass: "circle", unicode: "\uf111" },
-  "🟡": { name: "yellow", faClass: "circle", unicode: "\uf111" },
-  "🟢": { name: "green", faClass: "circle", unicode: "\uf111" },
-  "🔵": { name: "blue", faClass: "circle", unicode: "\uf111" },
-  "🟣": { name: "purple", faClass: "circle", unicode: "\uf111" },
-  "🟤": { name: "brown", faClass: "circle", unicode: "\uf111" },
-  "⚫": { name: "black", faClass: "circle", unicode: "\uf111" },
-  "⚪": { name: "white", faClass: "circle", unicode: "\uf111" },
-  "➕": { name: "plus", faClass: "plus", unicode: "\uf067" },
-  "➖": { name: "minus", faClass: "minus", unicode: "\uf068" },
-  "➗": { name: "divide", faClass: "divide", unicode: "\uf529" },
-  "✖️": { name: "multiply", faClass: "xmark", unicode: "\uf00d" },
-  "♾️": { name: "infinity", faClass: "infinity", unicode: "\uf534" },
-  "▶️": { name: "play", faClass: "play", unicode: "\uf04b" },
-  "⏸️": { name: "pause", faClass: "pause", unicode: "\uf04c" },
-  "⏹️": { name: "stop", faClass: "stop", unicode: "\uf04d" },
-  "🔀": { name: "shuffle", faClass: "shuffle", unicode: "\uf074" },
-  "🔁": { name: "repeat", faClass: "repeat", unicode: "\uf01e" },
-  "⏮️": { name: "previous", faClass: "backward-step", unicode: "\uf048" },
-  "⏭️": { name: "next", faClass: "forward-step", unicode: "\uf051" },
+  "❤️": { name: "heart", faClass: "fa-heart", unicode: "\uf004" },
+  "🔥": { name: "fire", faClass: "fa-fire", unicode: "\uf06d" },
+  "⭐": { name: "star", faClass: "fa-star", unicode: "\uf005" },
+  "✨": { name: "sparkles", faClass: "fa-star", unicode: "\uf005" },
+  "⚡": { name: "zap", faClass: "fa-bolt", unicode: "\uf0e7" },
+  "💎": { name: "gem", faClass: "fa-gem", unicode: "\uf3a5" },
+  "👑": { name: "crown", faClass: "fa-crown", unicode: "\uf521" },
+  "🏆": { name: "trophy", faClass: "fa-trophy", unicode: "\uf091" },
+  "🎯": { name: "dart", faClass: "fa-bullseye", unicode: "\uf140" },
+  "🚀": { name: "rocket", faClass: "fa-rocket", unicode: "\uf135" },
+  "💡": { name: "bulb", faClass: "fa-lightbulb", unicode: "\uf0eb" },
+  "🔑": { name: "key", faClass: "fa-key", unicode: "\uf084" },
+  "🔒": { name: "lock", faClass: "fa-lock", unicode: "\uf023" },
+  "🔗": { name: "link", faClass: "fa-link", unicode: "\uf0c1" },
+  "📌": { name: "pin", faClass: "fa-thumbtack", unicode: "\uf08d" },
+  "💰": { name: "money", faClass: "fa-sack-dollar", unicode: "\uf81d" },
+  "📊": { name: "chart", faClass: "fa-chart-bar", unicode: "\uf080" },
+  "📈": { name: "chart-up", faClass: "fa-chart-line", unicode: "\uf201" },
+  "🎨": { name: "art", faClass: "fa-palette", unicode: "\uf53f" },
+  "✏️": { name: "pencil", faClass: "fa-pencil", unicode: "\uf303" },
+  "📝": { name: "memo", faClass: "fa-pen-to-square", unicode: "\uf044" },
+  "📖": { name: "book", faClass: "fa-book", unicode: "\uf02d" },
+  "💬": { name: "speech", faClass: "fa-comment", unicode: "\uf075" },
+  "📢": { name: "megaphone", faClass: "fa-bullhorn", unicode: "\uf0a1" },
+  "🔔": { name: "bell", faClass: "fa-bell", unicode: "\uf0f3" },
+  "🎁": { name: "gift", faClass: "fa-gift", unicode: "\uf06b" },
+  "🛒": { name: "cart", faClass: "fa-cart-shopping", unicode: "\uf07a" },
+  "🏠": { name: "house", faClass: "fa-house", unicode: "\uf015" },
+  "💻": { name: "laptop", faClass: "fa-laptop", unicode: "\uf109" },
+  "📱": { name: "mobile", faClass: "fa-mobile", unicode: "\uf10b" },
+  "⚙️": { name: "gear", faClass: "fa-gear", unicode: "\uf013" },
+  "🔧": { name: "wrench", faClass: "fa-wrench", unicode: "\uf0ad" },
+  "🔨": { name: "hammer", faClass: "fa-hammer", unicode: "\uf6e3" },
+  "✅": { name: "check", faClass: "fa-circle-check", unicode: "\uf058" },
+  "❌": { name: "cross", faClass: "fa-circle-xmark", unicode: "\uf057" },
+  "⚠️": { name: "warning", faClass: "fa-triangle-exclamation", unicode: "\uf071" },
+  "❗": { name: "exclamation", faClass: "fa-exclamation", unicode: "\uf12a" },
+  "❓": { name: "question", faClass: "fa-question", unicode: "\uf128" },
+  "💯": { name: "100", faClass: "fa-hundred-points", unicode: "\uf896" },
+  "👍": { name: "thumbs-up", faClass: "fa-thumbs-up", unicode: "\uf164" },
+  "👎": { name: "thumbs-down", faClass: "fa-thumbs-down", unicode: "\uf165" },
+  "👏": { name: "clap", faClass: "fa-hands-clapping", unicode: "\uf817" },
+  "🙏": { name: "pray", faClass: "fa-hands-praying", unicode: "\uf684" },
+  "💪": { name: "muscle", faClass: "fa-hand-fist", unicode: "\uf6de" },
+  "🤝": { name: "handshake", faClass: "fa-handshake", unicode: "\uf2b5" },
+  "😀": { name: "grinning", faClass: "fa-face-smile", unicode: "\uf581" },
+  "😂": { name: "joy", faClass: "fa-face-laugh-beam", unicode: "\uf59b" },
+  "😍": { name: "heart-eyes", faClass: "fa-face-heart-eyes", unicode: "\uf7df" },
+  "🤔": { name: "thinking", faClass: "fa-face-thinking", unicode: "\uf5c4" },
+  "😎": { name: "cool", faClass: "fa-face-smile", unicode: "\uf581" },
+  "😢": { name: "cry", faClass: "fa-face-sad-tear", unicode: "\uf5b4" },
+  "😡": { name: "angry", faClass: "fa-face-angry", unicode: "\uf556" },
+  "💀": { name: "skull", faClass: "fa-skull", unicode: "\uf54c" },
+  "👻": { name: "ghost", faClass: "fa-ghost", unicode: "\uf6e2" },
+  "🤖": { name: "robot", faClass: "fa-robot", unicode: "\uf544" },
+  "🐶": { name: "dog", faClass: "fa-dog", unicode: "\uf6d3" },
+  "🐱": { name: "cat", faClass: "fa-cat", unicode: "\uf6c0" },
+  "🦊": { name: "fox", faClass: "fa-fox", unicode: "\uf813" },
+  "🐸": { name: "frog", faClass: "fa-frog", unicode: "\uf6e8" },
+  "🐝": { name: "bee", faClass: "fa-bug", unicode: "\uf188" },
+  "🦋": { name: "butterfly", faClass: "fa-bug", unicode: "\uf188" },
+  "🌸": { name: "blossom", faClass: "fa-seedling", unicode: "\uf4d8" },
+  "🌹": { name: "rose", faClass: "fa-seedling", unicode: "\uf4d8" },
+  "🌿": { name: "herb", faClass: "fa-leaf", unicode: "\uf06c" },
+  "🍀": { name: "four-leaf", faClass: "fa-leaf", unicode: "\uf06c" },
+  "🍁": { name: "maple", faClass: "fa-leaf", unicode: "\uf06c" },
+  "🌴": { name: "palm", faClass: "fa-tree-palm", unicode: "\uf82b" },
+  "🌳": { name: "tree", faClass: "fa-tree", unicode: "\uf1bb" },
+  "🍎": { name: "apple", faClass: "fa-apple-whole", unicode: "\uf5d1" },
+  "🍕": { name: "pizza", faClass: "fa-pizza-slice", unicode: "\uf818" },
+  "🍔": { name: "burger", faClass: "fa-burger", unicode: "\uf805" },
+  "☕": { name: "coffee", faClass: "fa-mug-hot", unicode: "\uf7b6" },
+  "🍺": { name: "beer", faClass: "fa-beer-mug-empty", unicode: "\uf0fc" },
+  "🍷": { name: "wine", faClass: "fa-wine-glass", unicode: "\uf4e3" },
+  "⚽": { name: "soccer", faClass: "fa-futbol", unicode: "\uf1e3" },
+  "🏀": { name: "basketball", faClass: "fa-basketball", unicode: "\uf434" },
+  "🎮": { name: "gamepad", faClass: "fa-gamepad", unicode: "\uf11b" },
+  "🎲": { name: "dice", faClass: "fa-dice", unicode: "\uf522" },
+  "🎵": { name: "music", faClass: "fa-music", unicode: "\uf001" },
+  "🎸": { name: "guitar", faClass: "fa-guitar", unicode: "\uf7a6" },
+  "🎤": { name: "mic", faClass: "fa-microphone", unicode: "\uf130" },
+  "🎧": { name: "headphones", faClass: "fa-headphones", unicode: "\uf025" },
+  "🎬": { name: "clapper", faClass: "fa-clapperboard", unicode: "\uf846" },
+  "✈️": { name: "airplane", faClass: "fa-plane", unicode: "\uf072" },
+  "🚗": { name: "car", faClass: "fa-car", unicode: "\uf1b9" },
+  "⚓": { name: "anchor", faClass: "fa-anchor", unicode: "\uf13d" },
+  "🌍": { name: "globe", faClass: "fa-globe", unicode: "\uf0ac" },
+  "☀️": { name: "sun", faClass: "fa-sun", unicode: "\uf185" },
+  "🌙": { name: "moon", faClass: "fa-moon", unicode: "\uf186" },
+  "🌈": { name: "rainbow", faClass: "fa-rainbow", unicode: "\uf8bc" },
+  "❄️": { name: "snowflake", faClass: "fa-snowflake", unicode: "\uf2dc" },
+  "🌊": { name: "wave", faClass: "fa-water", unicode: "\uf773" },
+  "💧": { name: "droplet", faClass: "fa-droplet", unicode: "\uf043" },
+  "♻️": { name: "recycle", faClass: "fa-recycle", unicode: "\uf1b8" },
+  "🚩": { name: "flag", faClass: "fa-flag", unicode: "\uf024" },
+  "🎉": { name: "party", faClass: "fa-champagne-glass", unicode: "\uf79e" },
+  "🎊": { name: "confetti", faClass: "fa-champagne-glass", unicode: "\uf79e" },
+  "🎀": { name: "ribbon", faClass: "fa-ribbon", unicode: "\uf837" },
+  "🔴": { name: "red-circle", faClass: "fa-circle", unicode: "\uf111" },
+  "🟢": { name: "green-circle", faClass: "fa-circle", unicode: "\uf111" },
+  "🔵": { name: "blue-circle", faClass: "fa-circle", unicode: "\uf111" },
+  "🌟": { name: "glowing-star", faClass: "fa-star", unicode: "\uf005" },
+  "💫": { name: "dizzy", faClass: "fa-star", unicode: "\uf005" },
+  "💥": { name: "boom", faClass: "fa-explosion", unicode: "\uf666" },
+  "💤": { name: "zzz", faClass: "fa-zzz", unicode: "\uf880" },
+  "👁️": { name: "eye", faClass: "fa-eye", unicode: "\uf06e" },
+  "🧠": { name: "brain", faClass: "fa-brain", unicode: "\uf5dc" },
+  "🧩": { name: "puzzle", faClass: "fa-puzzle-piece", unicode: "\uf12e" },
+  "🎭": { name: "theater", faClass: "fa-masks-theater", unicode: "\uf630" },
+  "📅": { name: "calendar", faClass: "fa-calendar", unicode: "\uf133" },
+  "✉️": { name: "envelope", faClass: "fa-envelope", unicode: "\uf0e0" },
+  "📞": { name: "phone", faClass: "fa-phone", unicode: "\uf095" },
+  "🔋": { name: "battery", faClass: "fa-battery-full", unicode: "\uf240" },
+  "📷": { name: "camera", faClass: "fa-camera", unicode: "\uf030" },
+  "💾": { name: "floppy", faClass: "fa-floppy-disk", unicode: "\uf0c7" },
+  "🏷️": { name: "tag", faClass: "fa-tag", unicode: "\uf02b" },
+  "📦": { name: "package", faClass: "fa-box", unicode: "\uf466" },
+  "🛡️": { name: "shield", faClass: "fa-shield", unicode: "\uf132" },
+  "⚖️": { name: "scales", faClass: "fa-scale-balanced", unicode: "\uf24e" },
+  "🧲": { name: "magnet", faClass: "fa-magnet", unicode: "\uf076" },
+  "🏅": { name: "medal", faClass: "fa-medal", unicode: "\uf5a2" },
+  "💡": { name: "idea", faClass: "fa-lightbulb", unicode: "\uf0eb" },
+  "❤️": { name: "love", faClass: "fa-heart", unicode: "\uf004" },
+  "💔": { name: "broken-heart", faClass: "fa-heart-crack", unicode: "\uf7a9" },
+  "❣️": { name: "heart-exclaim", faClass: "fa-heart", unicode: "\uf004" },
+  "💕": { name: "two-hearts", faClass: "fa-heart", unicode: "\uf004" },
+  "💖": { name: "sparkling-heart", faClass: "fa-heart", unicode: "\uf004" },
+  "💗": { name: "growing-heart", faClass: "fa-heart", unicode: "\uf004" },
+  "💘": { name: "heart-arrow", faClass: "fa-heart", unicode: "\uf004" },
+  "💝": { name: "heart-ribbon", faClass: "fa-heart", unicode: "\uf004" },
+  "♥️": { name: "heart-suit", faClass: "fa-heart", unicode: "\uf004" },
+  "👆": { name: "up", faClass: "fa-hand-point-up", unicode: "\uf0a6" },
+  "👇": { name: "down", faClass: "fa-hand-point-down", unicode: "\uf0a7" },
+  "👉": { name: "right", faClass: "fa-hand-point-right", unicode: "\uf0a4" },
+  "👈": { name: "left", faClass: "fa-hand-point-left", unicode: "\uf0a5" },
+  "✌️": { name: "peace", faClass: "fa-hand-peace", unicode: "\uf25b" },
+  "👋": { name: "wave", faClass: "fa-hand", unicode: "\uf256" },
+  "✊": { name: "fist", faClass: "fa-fist-raised", unicode: "\uf6de" },
+  "👊": { name: "punch", faClass: "fa-fist-raised", unicode: "\uf6de" },
+  "🙌": { name: "raised-hands", faClass: "fa-hands", unicode: "\uf255" },
+  "🌎": { name: "earth", faClass: "fa-globe", unicode: "\uf0ac" },
+  "🌏": { name: "earth2", faClass: "fa-globe", unicode: "\uf0ac" },
+  "🌪️": { name: "tornado", faClass: "fa-wind", unicode: "\uf72e" },
+  "☁️": { name: "cloud", faClass: "fa-cloud", unicode: "\uf0c2" },
+  "🌧️": { name: "rain", faClass: "fa-cloud-rain", unicode: "\uf73d" },
+  "⛈️": { name: "thunderstorm", faClass: "fa-cloud-bolt", unicode: "\uf76c" },
+  "🌩️": { name: "lightning", faClass: "fa-bolt", unicode: "\uf0e7" },
+  "☃️": { name: "snowman", faClass: "fa-snowflake", unicode: "\uf2dc" },
+  "🌊": { name: "ocean", faClass: "fa-water", unicode: "\uf773" },
+  "💬": { name: "comment", faClass: "fa-comment", unicode: "\uf075" },
+  "🔴": { name: "red", faClass: "fa-circle", unicode: "\uf111" },
+  "🟠": { name: "orange", faClass: "fa-circle", unicode: "\uf111" },
+  "🟡": { name: "yellow", faClass: "fa-circle", unicode: "\uf111" },
+  "🟣": { name: "purple", faClass: "fa-circle", unicode: "\uf111" },
+  "⚫": { name: "black", faClass: "fa-circle", unicode: "\uf111" },
+  "⚪": { name: "white", faClass: "fa-circle", unicode: "\uf111" },
+  "➕": { name: "plus", faClass: "fa-plus", unicode: "\uf067" },
+  "➖": { name: "minus", faClass: "fa-minus", unicode: "\uf068" },
+  "✖️": { name: "multiply", faClass: "fa-xmark", unicode: "\uf00d" },
+  "▶️": { name: "play", faClass: "fa-play", unicode: "\uf04b" },
+  "⏸️": { name: "pause", faClass: "fa-pause", unicode: "\uf04c" },
+  "⏹️": { name: "stop", faClass: "fa-stop", unicode: "\uf04d" },
+  "🔀": { name: "shuffle", faClass: "fa-shuffle", unicode: "\uf074" },
+  "🔁": { name: "repeat", faClass: "fa-repeat", unicode: "\uf01e" },
+  "⏮️": { name: "previous", faClass: "fa-backward-step", unicode: "\uf048" },
+  "⏭️": { name: "next", faClass: "fa-forward-step", unicode: "\uf051" },
 };
 
 /**
@@ -213,15 +185,12 @@ const EMOJI_MAP: Record<string, Omit<EmojiMapping, "emoji">> = {
  */
 export function extractEmoji(text: string): string[] {
   if (!text) return [];
-  // Match emoji: explicit emoji presentations + extended pictographic
-  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu;
+  // Comprehensive emoji regex covering all Unicode emoji ranges
+  const emojiRegex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
   const matches = text.match(emojiRegex);
   if (!matches) return [];
-  // Filter out variation selectors and joiners
-  const filtered = matches.filter(
-    (m) => m !== "\uFE0F" && m !== "\u200D" && m.length > 0
-  );
-  return [...new Set(filtered)];
+  // Deduplicate
+  return [...new Set(matches)];
 }
 
 /**
@@ -230,7 +199,7 @@ export function extractEmoji(text: string): string[] {
 export function removeEmoji(text: string): string {
   if (!text) return "";
   return text
-    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "")
+    .replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -255,62 +224,89 @@ export function getFontAwesomeFromText(text: string): EmojiMapping[] {
 }
 
 /**
- * Get Font Awesome SVG URL from CDN.
+ * Generate a repeating canvas pattern data URL with FA icons.
+ * This renders FA icons on a canvas and returns a data URL.
  */
-export function getFAIconUrl(faClass: string): string {
-  return `https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/svgs/solid/${faClass}.svg`;
-}
-
-/**
- * Generate a repeating SVG pattern using Font Awesome icon images.
- */
-export function generatePatternSvg(
+export function generatePatternDataUrl(
   icons: EmojiMapping[],
-  patternSize: number = 60,
-  iconSize: number = 24,
+  patternSize: number = 80,
+  iconSize: number = 28,
   color: string = "#ffffff",
   opacity: number = 0.15,
   fill: "solid" | "outline" = "solid"
 ): string {
   if (icons.length === 0) return "";
 
-  // Create icon positions in a grid
+  // Create off-screen canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = patternSize;
+  canvas.height = patternSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+
+  // Clear canvas
+  ctx.clearRect(0, 0, patternSize, patternSize);
+
+  // Icon positions in a 2x2 grid within the pattern tile
   const positions = [
-    { x: 8, y: 8 },
-    { x: patternSize / 2 + 8, y: 8 },
-    { x: 8, y: patternSize / 2 + 8 },
-    { x: patternSize / 2 + 8, y: patternSize / 2 + 8 },
+    { x: patternSize * 0.15, y: patternSize * 0.25 },
+    { x: patternSize * 0.6, y: patternSize * 0.15 },
+    { x: patternSize * 0.1, y: patternSize * 0.7 },
+    { x: patternSize * 0.55, y: patternSize * 0.65 },
   ];
 
-  const iconElements = icons
-    .slice(0, 4) // Max 4 icons per pattern tile
-    .map((icon, i) => {
-      const pos = positions[i % positions.length];
-      const url = getFAIconUrl(icon.faClass);
-      const style = fill === "outline"
-        ? `opacity="${opacity}"`
-        : `opacity="${opacity}" style="filter: brightness(0) invert(1)"`;
-      return `<image href="${url}" x="${pos.x}" y="${pos.y}" width="${iconSize}" height="${iconSize}" ${style}/>`;
-    })
-    .join("\n    ");
+  // Set font - FA uses "Font Awesome 6 Free" or "Font Awesome 6 Pro"
+  const fontWeight = "900";
+  ctx.font = `${fontWeight} ${iconSize}px "Font Awesome 6 Free"`;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${patternSize}" height="${patternSize}" viewBox="0 0 ${patternSize} ${patternSize}">
-    ${iconElements}
-  </svg>`;
+  if (fill === "solid") {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = opacity;
+  } else {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = opacity;
+  }
+
+  // Draw each icon
+  icons.slice(0, 4).forEach((icon, i) => {
+    const pos = positions[i % positions.length];
+    if (fill === "solid") {
+      ctx.fillText(icon.unicode, pos.x, pos.y);
+    } else {
+      ctx.strokeText(icon.unicode, pos.x, pos.y);
+    }
+  });
+
+  return canvas.toDataURL("image/png");
 }
 
 /**
- * Generate a pattern as a data URL for use in CSS background-image.
+ * Async version that waits for FA font to load before generating pattern.
  */
-export function generatePatternDataUrl(
+export async function generatePatternDataUrlAsync(
   icons: EmojiMapping[],
-  patternSize: number = 60,
-  iconSize: number = 24,
+  patternSize: number = 80,
+  iconSize: number = 28,
   color: string = "#ffffff",
   opacity: number = 0.15,
   fill: "solid" | "outline" = "solid"
-): string {
-  const svg = generatePatternSvg(icons, patternSize, iconSize, color, opacity, fill);
-  if (!svg) return "";
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+): Promise<string> {
+  if (icons.length === 0) return "";
+
+  // Wait for FA font to load
+  try {
+    await document.fonts.load(`900 ${iconSize}px "Font Awesome 6 Free"`);
+  } catch {
+    // Font might already be loaded, continue anyway
+  }
+
+  return generatePatternDataUrl(icons, patternSize, iconSize, color, opacity, fill);
+}
+
+/**
+ * Check if text has emoji.
+ */
+export function hasEmoji(text: string): boolean {
+  return extractEmoji(text).length > 0;
 }

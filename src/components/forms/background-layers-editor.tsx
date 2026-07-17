@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
-import { BackgroundLayerItemType } from "@/lib/validation/theme-schema";
+import { BackgroundLayerItemType, PatternType } from "@/lib/validation/theme-schema";
 import { BackgroundLayerRenderer } from "@/components/elements/background-layer-renderer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +27,15 @@ import {
   Image as ImageIcon,
   Sparkles,
   Palette,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   extractEmoji,
   mapEmojiToFontAwesome,
   EmojiMapping,
-  generatePatternDataUrl,
+  generatePatternDataUrlAsync,
+  hasEmoji,
 } from "@/lib/emoji-fontawesome-map";
 
 // ── Gradient Directions ─────────────────────────────────────────
@@ -48,7 +50,7 @@ const GRADIENT_DIRECTIONS = [
   { label: "◎ Radial", value: "radial" },
 ];
 
-// ── Emoji Pattern Auto-Generator ────────────────────────────────
+// ── Emoji Pattern Generator ────────────────────────────────────
 
 function EmojiPatternGenerator({
   onGenerate,
@@ -67,7 +69,10 @@ function EmojiPatternGenerator({
 
   return (
     <div className="space-y-2 p-2 border rounded-md bg-muted/30">
-      <Label className="text-xs font-medium">Auto-detect Emoji → FA Icons</Label>
+      <Label className="text-xs font-medium">
+        <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>
+        Auto-detect Emoji → FA Icons
+      </Label>
       <Input
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
@@ -81,9 +86,8 @@ function EmojiPatternGenerator({
               <span
                 key={i}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-xs"
-                title={`${icon.name} (${icon.faClass})`}
               >
-                {icon.emoji}
+                <i className={`${icon.faClass} text-sm`}></i>
                 <span className="text-muted-foreground">{icon.name}</span>
               </span>
             ))}
@@ -103,7 +107,7 @@ function EmojiPatternGenerator({
   );
 }
 
-// ── Pattern Preview ─────────────────────────────────────────────
+// ── Pattern Preview (canvas-based) ──────────────────────────────
 
 function PatternPreview({
   icons,
@@ -120,18 +124,25 @@ function PatternPreview({
   patternSize: number;
   fill: "solid" | "outline";
 }) {
-  const url = useMemo(
-    () => generatePatternDataUrl(icons, patternSize, iconSize, color, opacity / 100, fill),
-    [icons, patternSize, iconSize, color, opacity, fill]
-  );
+  const [patternUrl, setPatternUrl] = useState<string>("");
 
-  if (!url) return null;
+  useEffect(() => {
+    if (icons.length === 0) {
+      setPatternUrl("");
+      return;
+    }
+    generatePatternDataUrlAsync(icons, patternSize, iconSize, color, opacity / 100, fill)
+      .then(setPatternUrl)
+      .catch(() => setPatternUrl(""));
+  }, [icons, patternSize, iconSize, color, opacity, fill]);
+
+  if (!patternUrl || icons.length === 0) return null;
 
   return (
     <div
       className="w-full h-16 rounded border"
       style={{
-        backgroundImage: `url("${url}")`,
+        backgroundImage: `url("${patternUrl}")`,
         backgroundRepeat: "repeat",
         backgroundSize: `${patternSize}px ${patternSize}px`,
       }}
@@ -155,13 +166,13 @@ function PatternLayerEditor({
     icons: [],
     color: "#ffffff",
     opacity: 15,
-    iconSize: 24,
-    patternSize: 60,
+    iconSize: 28,
+    patternSize: 80,
     fill: "solid" as const,
   };
 
-  const updatePattern = (updates: Partial<typeof pattern>) => {
-    onUpdate(index, { pattern: { ...pattern, ...updates } });
+  const updatePattern = (updates: Partial<PatternType>) => {
+    onUpdate(index, { pattern: { ...pattern, ...updates } as PatternType });
   };
 
   return (
@@ -174,16 +185,19 @@ function PatternLayerEditor({
       {/* Manual icon list */}
       {pattern.icons.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-xs">Icons ({pattern.icons.length})</Label>
+          <Label className="text-xs">
+            <i className="fa-solid fa-icons mr-1"></i>
+            Icons ({pattern.icons.length})
+          </Label>
           <div className="flex flex-wrap gap-1">
             {pattern.icons.map((icon, i) => (
               <span
                 key={i}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary text-xs"
               >
-                {icon.emoji}
+                <i className={`${icon.faClass} text-sm`}></i>
                 <button
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive ml-1"
                   onClick={() => {
                     const newIcons = pattern.icons.filter((_, j) => j !== i);
                     updatePattern({ icons: newIcons });
@@ -274,7 +288,7 @@ function PatternLayerEditor({
         <Slider
           value={[pattern.patternSize]}
           onValueChange={([v]) => updatePattern({ patternSize: v })}
-          min={20}
+          min={30}
           max={200}
           step={5}
           className="flex-1"
@@ -283,16 +297,14 @@ function PatternLayerEditor({
       </div>
 
       {/* Preview */}
-      {pattern.icons.length > 0 && (
-        <PatternPreview
-          icons={pattern.icons}
-          color={pattern.color}
-          opacity={pattern.opacity}
-          iconSize={pattern.iconSize}
-          patternSize={pattern.patternSize}
-          fill={pattern.fill}
-        />
-      )}
+      <PatternPreview
+        icons={pattern.icons}
+        color={pattern.color}
+        opacity={pattern.opacity}
+        iconSize={pattern.iconSize}
+        patternSize={pattern.patternSize}
+        fill={pattern.fill}
+      />
     </div>
   );
 }
@@ -355,7 +367,6 @@ function GradientLayerEditor({
 
   return (
     <div className="space-y-2 mt-2">
-      {/* Direction */}
       <div className="flex items-center gap-2">
         <Label className="text-xs w-16">Direction</Label>
         <Select
@@ -375,7 +386,6 @@ function GradientLayerEditor({
         </Select>
       </div>
 
-      {/* Color stops */}
       {gradient.stops.map((stop, stopIndex) => (
         <div key={stopIndex} className="flex items-center gap-1">
           <input
@@ -416,10 +426,83 @@ function GradientLayerEditor({
         </Button>
       )}
 
-      {/* Preview */}
       <div className="w-full h-8 rounded border" style={{ background: previewCss }} />
     </div>
   );
+}
+
+// ── Auto-Pattern from Slide Text ────────────────────────────────
+
+/**
+ * Scan all slide texts for emoji and auto-create pattern layers.
+ */
+export function useAutoPattern() {
+  const form: DocumentFormReturn = useFormContext();
+
+  const generateAutoPattern = async () => {
+    const slides = form.getValues("slides") || [];
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
+
+    // Collect all emoji from all slides
+    let allEmoji: string[] = [];
+    slides.forEach((slide: any) => {
+      if (slide.elements) {
+        slide.elements.forEach((el: any) => {
+          if (el.text) {
+            allEmoji = [...allEmoji, ...extractEmoji(el.text)];
+          }
+        });
+      }
+    });
+
+    const uniqueEmoji = [...new Set(allEmoji)];
+    if (uniqueEmoji.length === 0) return;
+
+    // Map to FA icons
+    const icons = uniqueEmoji
+      .map(mapEmojiToFontAwesome)
+      .filter((m): m is EmojiMapping => m !== null);
+
+    if (icons.length === 0) return;
+
+    // Check if pattern layer already exists
+    const existingPattern = currentLayers.find(
+      (l: any) => l.type === "pattern"
+    );
+
+    const newPattern: BackgroundLayerItemType = {
+      id: existingPattern?.id || `pattern-auto-${Date.now()}`,
+      type: "pattern",
+      opacity: 15,
+      visible: true,
+      pattern: {
+        type: "pattern",
+        icons: icons.slice(0, 8), // Max 8 unique icons
+        color: "#ffffff",
+        opacity: 15,
+        iconSize: 28,
+        patternSize: 80,
+        fill: "solid",
+      },
+    };
+
+    if (existingPattern) {
+      // Update existing pattern layer
+      const updated = currentLayers.map((l: any) =>
+        l.id === existingPattern.id ? newPattern : l
+      );
+      form.setValue("config.theme.backgroundLayers", updated, { shouldDirty: true });
+    } else {
+      // Add new pattern layer at the bottom
+      form.setValue(
+        "config.theme.backgroundLayers",
+        [...currentLayers, newPattern],
+        { shouldDirty: true }
+      );
+    }
+  };
+
+  return { generateAutoPattern };
 }
 
 // ── Main Background Layers Editor ───────────────────────────────
@@ -427,6 +510,7 @@ function GradientLayerEditor({
 export function BackgroundLayersEditor() {
   const form: DocumentFormReturn = useFormContext();
   const layers = form.watch("config.theme.backgroundLayers") || [];
+  const { generateAutoPattern } = useAutoPattern();
 
   const updateLayer = (index: number, updates: Partial<BackgroundLayerItemType>) => {
     const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
@@ -440,7 +524,8 @@ export function BackgroundLayersEditor() {
     const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
     form.setValue(
       "config.theme.backgroundLayers",
-      currentLayers.filter((_, i) => i !== index)
+      currentLayers.filter((_, i) => i !== index),
+      { shouldDirty: true }
     );
   };
 
@@ -455,12 +540,12 @@ export function BackgroundLayersEditor() {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newLayers.length) return;
     [newLayers[index], newLayers[targetIndex]] = [newLayers[targetIndex], newLayers[index]];
-    form.setValue("config.theme.backgroundLayers", newLayers);
+    form.setValue("config.theme.backgroundLayers", newLayers, { shouldDirty: true });
   };
 
   const addLayer = (type: "color" | "gradient" | "image" | "pattern") => {
-    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
     const id = `layer-${Date.now()}`;
+    const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
     const newLayer: BackgroundLayerItemType = {
       id,
       type,
@@ -486,14 +571,17 @@ export function BackgroundLayersEditor() {
               icons: [],
               color: "#ffffff",
               opacity: 15,
-              iconSize: 24,
-              patternSize: 60,
+              iconSize: 28,
+              patternSize: 80,
               fill: "solid" as const,
             },
           }
         : {}),
     };
-    form.setValue("config.theme.backgroundLayers", [...currentLayers, newLayer], { shouldDirty: true, shouldTouch: true });
+    form.setValue("config.theme.backgroundLayers", [...currentLayers, newLayer], {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   };
 
   return (
@@ -501,6 +589,18 @@ export function BackgroundLayersEditor() {
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Background Layers</Label>
       </div>
+
+      {/* Auto-pattern button */}
+      <Button
+        size="sm"
+        variant="secondary"
+        className="w-full h-8 text-xs"
+        onClick={generateAutoPattern}
+      >
+        <Wand2 className="w-3 h-3 mr-1" />
+        <i className="fa-solid fa-wand-magic-sparkles mr-1"></i>
+        Auto Pattern from Slide Emoji
+      </Button>
 
       {/* Layer list */}
       <div className="space-y-2">
@@ -513,7 +613,6 @@ export function BackgroundLayersEditor() {
             <div className="flex items-center gap-2">
               <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
 
-              {/* Type icon */}
               {layer.type === "color" && <Paintbrush className="w-4 h-4 text-blue-500" />}
               {layer.type === "gradient" && <Layers className="w-4 h-4 text-purple-500" />}
               {layer.type === "image" && <ImageIcon className="w-4 h-4 text-green-500" />}

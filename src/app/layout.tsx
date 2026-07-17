@@ -100,6 +100,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Font Awesome 6 Free */}
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+        />
+      </head>
       <body
         className={`${dm_sans.variable} ${dm_serif_display.variable} ${pt_serif.variable} ${roboto.variable} ${roboto_condensed.variable} ${ultra.variable} ${inter.variable} ${syne.variable} ${archivoBlack.variable}  ${montserrat.variable}  ${GeistSans.variable} flex flex-col min-h-screen items-stretch justify-between antialiased`}
       >

@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { BackgroundLayerItemType } from "@/lib/validation/theme-schema";
-import { generatePatternDataUrl } from "@/lib/emoji-fontawesome-map";
+import { generatePatternDataUrlAsync } from "@/lib/emoji-fontawesome-map";
 
 /**
  * Renders a single background layer (color, gradient, image, or pattern).
@@ -86,30 +86,62 @@ export function BackgroundLayerRenderer({
   }
 
   if (layer.type === "pattern" && layer.pattern?.icons?.length) {
-    const { icons, color, opacity, iconSize, patternSize, fill } = layer.pattern;
-    const patternUrl = generatePatternDataUrl(
-      icons,
-      patternSize,
-      iconSize,
-      color,
-      opacity / 100,
-      fill
+    return (
+      <PatternLayer
+        layer={layer}
+        baseStyle={baseStyle}
+        className={className}
+      />
     );
-
-    if (patternUrl) {
-      return (
-        <div
-          className={cn("absolute inset-0", className)}
-          style={{
-            ...baseStyle,
-            backgroundImage: `url("${patternUrl}")`,
-            backgroundRepeat: "repeat",
-            backgroundSize: `${patternSize}px ${patternSize}px`,
-          }}
-        />
-      );
-    }
   }
 
   return null;
+}
+
+/**
+ * Pattern layer with async canvas rendering.
+ */
+function PatternLayer({
+  layer,
+  baseStyle,
+  className,
+}: {
+  layer: BackgroundLayerItemType;
+  baseStyle: React.CSSProperties;
+  className?: string;
+}) {
+  const [patternUrl, setPatternUrl] = useState<string>("");
+  const pattern = layer.pattern!;
+
+  useEffect(() => {
+    if (!pattern.icons.length) {
+      setPatternUrl("");
+      return;
+    }
+
+    generatePatternDataUrlAsync(
+      pattern.icons,
+      pattern.patternSize,
+      pattern.iconSize,
+      pattern.color,
+      pattern.opacity / 100,
+      pattern.fill
+    )
+      .then(setPatternUrl)
+      .catch(() => setPatternUrl(""));
+  }, [pattern.icons, pattern.patternSize, pattern.iconSize, pattern.color, pattern.opacity, pattern.fill]);
+
+  if (!patternUrl) return null;
+
+  return (
+    <div
+      className={cn("absolute inset-0", className)}
+      style={{
+        ...baseStyle,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: "repeat",
+        backgroundSize: `${pattern.patternSize}px ${pattern.patternSize}px`,
+      }}
+    />
+  );
 }
