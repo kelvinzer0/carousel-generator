@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { CommonSlideSchema } from "@/lib/validation/slide-schema";
 import { BackgroundLayer } from "@/components/elements/background-layer";
 import { BackgroundImageLayer } from "@/components/elements/background-image-layer";
+import { BackgroundLayerRenderer } from "@/components/elements/background-layer-renderer";
 import { PageBase } from "@/components/pages/page-base";
 import { Title } from "@/components/elements/title";
 import { Subtitle } from "@/components/elements/subtitle";
@@ -67,7 +68,20 @@ export function CommonPage({
 
   return (
     <PageBase size={size} fieldName={backgroundImageField}>
-      <BackgroundLayer background={config.theme.background} className="-z-20" />
+      {/* Legacy background color fallback */}
+      <BackgroundLayer background={config.theme.background} className="-z-30" />
+
+      {/* Background layers (new system) */}
+      {config.theme.backgroundLayers?.map((layer, i) => (
+        <BackgroundLayerRenderer
+          key={layer.id}
+          layer={layer}
+          className=""
+          style={{ zIndex: -20 + i }}
+        />
+      ))}
+
+      {/* Legacy slide background image */}
       {slide.backgroundImage?.source.src ? (
         <BackgroundImageLayer image={slide.backgroundImage} className="-z-10" />
       ) : null}

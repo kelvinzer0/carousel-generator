@@ -20,6 +20,7 @@ import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { Separator } from "../ui/separator";
+import { BackgroundLayersEditor } from "./background-layers-editor";
 
 const GRADIENT_PRESETS = [
   { label: "Sunset", direction: "to right", stops: [{ color: "#ff7e5f", position: 0 }, { color: "#feb47b", position: 100 }] },
@@ -355,26 +356,7 @@ function CustomColors({ form }: { form: DocumentFormReturn }) {
         colorPath="config.theme.secondary"
         stylePath="config.theme.secondaryStyle"
       />
-      <FormField
-        control={form.control}
-        name="config.theme.background"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Background</FormLabel>
-            <FormControl>
-              <div className="flex gap-2 items-center">
-                <Input
-                  type="color"
-                  className="w-10 h-8 p-1 cursor-pointer"
-                  {...field}
-                />
-                <Input placeholder="#ffffff" className="flex-1" {...field} />
-              </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <BackgroundLayersEditor />
     </>
   );
 }

@@ -13,6 +13,7 @@ export const GradientSchema = z.object({
     z.object({
       color: z.string(),
       position: z.number().min(0).max(100),
+      opacity: z.number().min(0).max(100).default(100),
     })
   ).min(2).max(5),
 });
@@ -32,13 +33,31 @@ export const TextStyleSchema = z.object({
   useTexture: z.boolean().default(false),
 });
 
+// Background Layer
+export const BackgroundLayerItemSchema = z.object({
+  id: z.string(),
+  type: z.enum(["color", "gradient", "image"]),
+  opacity: z.number().min(0).max(100).default(100),
+  visible: z.boolean().default(true),
+  color: z.string().optional(),
+  gradient: GradientSchema.optional(),
+  image: z.object({
+    src: z.string(),
+    fit: z.enum(["cover", "contain"]).default("cover"),
+  }).optional(),
+});
+
+export const BackgroundLayersSchema = z.array(BackgroundLayerItemSchema).default([]);
+
 export const ThemeSchema = ColorSchema.extend({
   isCustom: z.boolean(),
   pallette: z.string(),
   primaryStyle: TextStyleSchema.optional(),
   secondaryStyle: TextStyleSchema.optional(),
+  backgroundLayers: BackgroundLayersSchema.optional(),
 });
 
 export type GradientType = z.infer<typeof GradientSchema>;
 export type TextureType = z.infer<typeof TextureSchema>;
 export type TextStyleType = z.infer<typeof TextStyleSchema>;
+export type BackgroundLayerItemType = z.infer<typeof BackgroundLayerItemSchema>;
