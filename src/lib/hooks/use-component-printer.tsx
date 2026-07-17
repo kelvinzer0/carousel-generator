@@ -12,7 +12,6 @@ import { prerenderGradientText, preloadTextures } from "@/lib/prerender-gradient
 import {
   uploadPdfToRemixPost,
   uploadImagesToRemixPost,
-  uploadToRemixPost,
   RemixPostUploadResult,
 } from "@/lib/remixpost-upload";
 
@@ -106,9 +105,6 @@ async function captureSlideToDataUrl(
   }
 }
 
-/**
- * Convert data URL to Blob.
- */
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, data] = dataUrl.split(",");
   const mime = header.match(/:(.*?);/)?.[1] || "image/png";
@@ -222,56 +218,63 @@ export function useComponentPrinter() {
 
   // ── Upload PDF to RemixPost ───────────────────────────────────
 
-  const uploadPdf = React.useCallback(async (): Promise<RemixPostUploadResult> => {
-    const container = document.getElementById("element-to-download-as-pdf");
-    if (!container) return { success: false, error: "Container not found" };
+  const uploadPdf = React.useCallback(
+    async (folderPath: string): Promise<RemixPostUploadResult> => {
+      const container = document.getElementById("element-to-download-as-pdf");
+      if (!container) return { success: false, error: "Container not found" };
 
-    const slideElements = getSlideElements(container);
-    if (slideElements.length === 0)
-      return { success: false, error: "No slides found" };
+      const slideElements = getSlideElements(container);
+      if (slideElements.length === 0)
+        return { success: false, error: "No slides found" };
 
-    setIsUploading(true);
-    try {
-      const pdf = new jsPDF({
-        unit: "px",
-        format: [SIZE.width, SIZE.height],
-      });
+      setIsUploading(true);
+      try {
+        const pdf = new jsPDF({
+          unit: "px",
+          format: [SIZE.width, SIZE.height],
+        });
 
-      for (let i = 0; i < slideElements.length; i++) {
-        const slideEl = slideElements[i];
-        const pageContent = slideEl.querySelector(
-          "[id^='page-base-']"
-        ) as HTMLElement;
-        if (!pageContent) continue;
+        for (let i = 0; i < slideElements.length; i++) {
+          const slideEl = slideElements[i];
+          const pageContent = slideEl.querySelector(
+            "[id^='page-base-']"
+          ) as HTMLElement;
+          if (!pageContent) continue;
 
-        const dataUrl = await captureSlideToDataUrl(
-          pageContent,
-          "jpeg",
-          0.95,
-          IMAGE_EXPORT_SCALE
-        );
+          const dataUrl = await captureSlideToDataUrl(
+            pageContent,
+            "jpeg",
+            0.95,
+            IMAGE_EXPORT_SCALE
+          );
 
-        if (i > 0) pdf.addPage();
-        pdf.addImage(dataUrl, "JPEG", 0, 0, SIZE.width, SIZE.height);
+          if (i > 0) pdf.addPage();
+          pdf.addImage(dataUrl, "JPEG", 0, 0, SIZE.width, SIZE.height);
+        }
+
+        const filename = watch("filename") || "carousel";
+        const pdfBlob = pdf.output("blob");
+        return await uploadPdfToRemixPost(pdfBlob, filename, folderPath);
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "PDF upload failed",
+        };
+      } finally {
+        setIsUploading(false);
       }
-
-      const filename = watch("filename") || "carousel";
-      const pdfBlob = pdf.output("blob");
-      return await uploadPdfToRemixPost(pdfBlob, filename);
-    } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : "PDF upload failed",
-      };
-    } finally {
-      setIsUploading(false);
-    }
-  }, [watch, SIZE]);
+    },
+    [watch, SIZE]
+  );
 
   // ── Upload Images to RemixPost ────────────────────────────────
 
   const uploadImages = React.useCallback(
-    async (format: ExportImageFormat, quality: number = 0.95): Promise<RemixPostUploadResult[]> => {
+    async (
+      format: ExportImageFormat,
+      folderPath: string,
+      quality: number = 0.95
+    ): Promise<RemixPostUploadResult[]> => {
       const container = document.getElementById("element-to-download-as-pdf");
       if (!container) return [{ success: false, error: "Container not found" }];
 
@@ -305,7 +308,7 @@ export function useComponentPrinter() {
           });
         }
 
-        return await uploadImagesToRemixPost(images, format);
+        return await uploadImagesToRemixPost(images, format, folderPath);
       } catch (err) {
         return [
           {

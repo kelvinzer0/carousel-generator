@@ -5,7 +5,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   MultiSlideSchema,
   UnstyledMultiSlideSchema,
-} from "@/lib/validation/slide-schema"; // TODO: Keep only the slides for some prompt
+} from "@/lib/validation/slide-schema";
 import { UnstyledDocumentSchema } from "@/lib/validation/document-schema";
 import {
   UnstyledTitleSchema,
@@ -70,12 +70,15 @@ export async function generateCarouselSlides(
 }
 
 function startModelClient(api_key: string) {
+  const baseURL = process.env.OPENAI_BASE_URL || undefined;
+  const modelName = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
   return new ChatOpenAI({
     openAIApiKey: api_key,
-    modelName: "gpt-4o-mini",
+    modelName,
     temperature: 0,
+    ...(baseURL && { configuration: { baseURL } }),
   }).bind({
-    // TODO Migrate to Tool and force to call the function with tool choice
     functions: [carouselFunctionSchema],
     function_call: { name: "carouselCreator" },
   });

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Icons } from "@/components/icons";
 import { Button, buttonVariants } from "./ui/button";
 import { EditorMenubar } from "./editor-menubar";
-import { Download, Loader2Icon, Upload, ChevronDown } from "lucide-react";
+import { Download, Loader2Icon, Upload, ChevronDown, FolderOpen } from "lucide-react";
 import Pager from "./pager";
 import { FilenameForm } from "./forms/filename-form";
 import { BringYourKeysDialog } from "@/components/api-keys-dialog";
@@ -19,6 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ExportImageFormat } from "@/lib/hooks/use-component-printer";
 import { RemixPostUploadResult } from "@/lib/remixpost-upload";
 
@@ -35,8 +43,8 @@ interface MainNavProps {
   isPrinting: boolean;
   exportAsImages: (format: ExportImageFormat, quality?: number) => Promise<void>;
   isExporting: boolean;
-  uploadPdf: () => Promise<RemixPostUploadResult>;
-  uploadImages: (format: ExportImageFormat) => Promise<RemixPostUploadResult[]>;
+  uploadPdf: (folderPath: string) => Promise<RemixPostUploadResult>;
+  uploadImages: (format: ExportImageFormat, folderPath: string) => Promise<RemixPostUploadResult[]>;
   isUploading: boolean;
   className?: string;
 }
@@ -53,25 +61,39 @@ export function MainNav({
 }: MainNavProps) {
   const isLoading = isPrinting || isExporting || isUploading;
 
-  const handleUploadPdf = async () => {
-    const result = await uploadPdf();
-    if (result.success) {
-      alert("✅ PDF uploaded to RemixPost!");
-    } else {
-      alert(`❌ Upload failed: ${result.error}`);
-    }
+  // Upload dialog state
+  const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
+  const [uploadType, setUploadType] = React.useState<"pdf" | "png" | "webp" | "jpeg">("pdf");
+  const [folderPath, setFolderPath] = React.useState("carousel-exports");
+
+  const openUploadDialog = (type: "pdf" | "png" | "webp" | "jpeg") => {
+    setUploadType(type);
+    setUploadDialogOpen(true);
   };
 
-  const handleUploadImages = async (format: ExportImageFormat) => {
-    const results = await uploadImages(format);
-    const succeeded = results.filter((r) => r.success).length;
-    const failed = results.filter((r) => !r.success);
-    if (failed.length === 0) {
-      alert(`✅ ${succeeded} ${format.toUpperCase()} images uploaded to RemixPost!`);
+  const handleUploadConfirm = async () => {
+    setUploadDialogOpen(false);
+
+    const folder = folderPath.trim() || "carousel-exports";
+
+    if (uploadType === "pdf") {
+      const result = await uploadPdf(folder);
+      if (result.success) {
+        alert("✅ PDF uploaded to RemixPost!");
+      } else {
+        alert(`❌ Upload failed: ${result.error}`);
+      }
     } else {
-      alert(
-        `⚠️ ${succeeded} succeeded, ${failed.length} failed.\n${failed.map((r) => r.error).join("\n")}`
-      );
+      const results = await uploadImages(uploadType, folder);
+      const succeeded = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success);
+      if (failed.length === 0) {
+        alert(`✅ ${succeeded} ${uploadType.toUpperCase()} images uploaded!`);
+      } else {
+        alert(
+          `⚠️ ${succeeded} succeeded, ${failed.length} failed.\n${failed.map((r) => r.error).join("\n")}`
+        );
+      }
     }
   };
 
@@ -158,35 +180,73 @@ export function MainNav({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Upload PDF</DropdownMenuLabel>
-            <DropdownMenuItem onClick={handleUploadPdf} disabled={isLoading}>
+            <DropdownMenuItem onClick={() => openUploadDialog("pdf")} disabled={isLoading}>
               <Upload className="w-4 h-4 mr-2" />
               Upload PDF
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Upload Images</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => handleUploadImages("png")}
-              disabled={isLoading}
-            >
+            <DropdownMenuItem onClick={() => openUploadDialog("png")} disabled={isLoading}>
               <Upload className="w-4 h-4 mr-2" />
               Upload PNGs
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleUploadImages("webp")}
-              disabled={isLoading}
-            >
+            <DropdownMenuItem onClick={() => openUploadDialog("webp")} disabled={isLoading}>
               <Upload className="w-4 h-4 mr-2" />
               Upload WEBPs
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleUploadImages("jpeg")}
-              disabled={isLoading}
-            >
+            <DropdownMenuItem onClick={() => openUploadDialog("jpeg")} disabled={isLoading}>
               <Upload className="w-4 h-4 mr-2" />
               Upload JPEGs
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* ── Upload Folder Dialog ───────────────────────── */}
+        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5" />
+                Upload {uploadType.toUpperCase()} to RemixPost
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <label className="text-sm font-medium">
+                Folder path di RemixPost
+              </label>
+              <Input
+                value={folderPath}
+                onChange={(e) => setFolderPath(e.target.value)}
+                placeholder="carousel-exports"
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Contoh: <code>promotions</code>, <code>brand/carousel</code>, <code>2024/jan</code>
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setUploadDialogOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button onClick={handleUploadConfirm} disabled={isUploading}>
+                {isUploading ? (
+                  <>
+                    <Loader2Icon className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <StarOnGithub />
         <Link
