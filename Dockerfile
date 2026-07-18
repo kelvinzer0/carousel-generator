@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y python3 make g++ libpixman-1-dev libcai
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod=false
+RUN pnpm install --no-frozen-lockfile --prod=false
 
 # Stage 2: Build
 FROM node:20-bookworm-slim AS builder
