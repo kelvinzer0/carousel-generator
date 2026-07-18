@@ -1,4 +1,10 @@
 export const SIZE_PRESETS = {
+  desktop: {
+    label: "Desktop",
+    width: 540,
+    height: 270,
+    aspectRatio: "2:1",
+  },
   linkedin: {
     label: "LinkedIn",
     width: 400,
@@ -7,6 +13,12 @@ export const SIZE_PRESETS = {
   },
   instagram: {
     label: "Instagram",
+    width: 432,
+    height: 540,
+    aspectRatio: "4:5",
+  },
+  mobile: {
+    label: "Mobile",
     width: 432,
     height: 540,
     aspectRatio: "4:5",

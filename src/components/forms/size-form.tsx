@@ -12,8 +12,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 
 const sizeOptions: { value: SizePresetKey; label: string; desc: string }[] = [
+  { value: "desktop", label: "Desktop", desc: "2:1 (1080×540)" },
   { value: "linkedin", label: "LinkedIn", desc: "4:5 (1080×1350)" },
   { value: "instagram", label: "Instagram", desc: "4:5 (1080×1350)" },
+  { value: "mobile", label: "Mobile", desc: "4:5 (1080×1350)" },
   { value: "tiktok", label: "TikTok", desc: "9:16 (1080×1920)" },
 ];
 
