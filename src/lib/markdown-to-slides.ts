@@ -19,10 +19,12 @@ import { z } from "zod";
 import { MultiSlideSchema } from "@/lib/validation/slide-schema";
 import { ElementType } from "@/lib/validation/element-type";
 
+import { ImageInputType } from "@/lib/validation/image-schema";
+
 interface SlideElement {
   type: "Title" | "Subtitle" | "Description" | "ContentImage" | "Image";
   text?: string;
-  source?: { src: string; type: string };
+  source?: { src: string; type: ImageInputType };
   style?: Record<string, unknown>;
 }
 
@@ -115,7 +117,7 @@ function parseBlock(block: string): SlideElement[] {
 
       elements.push({
         type: "ContentImage",
-        source: { src: imgMatch[2], type: "URL" },
+        source: { src: imgMatch[2], type: ImageInputType.Url },
         style: { opacity: 100, objectFit: "Cover" },
       });
       continue;
@@ -171,7 +173,7 @@ export function parseMarkdownToSlides(
           if (el.type === "ContentImage") {
             return {
               type: "ContentImage" as const,
-              source: el.source as { src: string; type: string },
+              source: el.source as { src: string; type: ImageInputType },
               style: {
                 opacity: 100,
                 objectFit: "Cover" as const,
@@ -184,7 +186,7 @@ export function parseMarkdownToSlides(
             style: el.style || { fontSize: "Medium", align: "Left" },
           };
         }),
-        backgroundImage: { type: "Image", source: { src: "", type: "URL" }, style: { opacity: 30 } },
+        backgroundImage: { type: "Image", source: { src: "", type: ImageInputType.Url }, style: { opacity: 30 } },
       });
     }
 
