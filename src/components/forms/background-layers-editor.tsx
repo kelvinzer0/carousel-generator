@@ -374,7 +374,7 @@ function GradientLayerEditor({
         <Label className="text-xs w-16">Direction</Label>
         <Select
           value={gradient.direction}
-          onValueChange={(e) => updateGradient({ direction: e.target.value })}
+          onValueChange={(value) => updateGradient({ direction: value })}
         >
           <SelectTrigger className="h-8 text-xs">
             <SelectValue />

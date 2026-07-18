@@ -112,7 +112,7 @@ const GradientTextarea = React.forwardRef<
           caretColor: style?.color || "#000",
           position: "relative",
           zIndex: 1,
-        }}
+        } as React.CSSProperties}
       />
     </div>
   );
