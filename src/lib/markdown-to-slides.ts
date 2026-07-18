@@ -4,33 +4,29 @@
  * Heading (# / ##) starts a new slide.
  * Images (![alt](url)) become ContentImage elements.
  * Other text becomes Description elements.
- *
- * Example input:
- *   # First Slide Title
- *   Some description text
- *   ![Hero](https://example.com/hero.jpg)
- *
- *   # Second Slide
- *   More content
- *   ![Photo](https://example.com/photo.png)
  */
 
 import { z } from "zod";
 import { MultiSlideSchema } from "@/lib/validation/slide-schema";
-import { ElementType } from "@/lib/validation/element-type";
-
 import { ImageInputType } from "@/lib/validation/image-schema";
 
-interface SlideElement {
-  type: "Title" | "Subtitle" | "Description" | "ContentImage" | "Image";
-  text?: string;
-  source?: { src: string; type: ImageInputType };
-  style?: Record<string, unknown>;
+type FontSize = "Small" | "Medium" | "Large";
+type TextAlign = "Left" | "Center" | "Right";
+
+interface TextStyle {
+  fontSize: FontSize;
+  align: TextAlign;
 }
 
-interface Slide {
-  elements: SlideElement[];
-}
+type ParsedElement =
+  | { type: "Title"; text: string; style: TextStyle }
+  | { type: "Subtitle"; text: string; style: TextStyle }
+  | { type: "Description"; text: string; style: TextStyle }
+  | {
+      type: "ContentImage";
+      source: { src: string; type: ImageInputType };
+      style: { opacity: number; objectFit: "Cover" };
+    };
 
 /** Split markdown into slide blocks by top-level headings */
 function splitIntoBlocks(markdown: string): string[] {
@@ -39,7 +35,6 @@ function splitIntoBlocks(markdown: string): string[] {
   let current: string[] = [];
 
   for (const line of lines) {
-    // New slide on # or ## heading (but not ### or deeper)
     if (/^#{1,2}\s+/.test(line) && !/^#{3,}\s+/.test(line)) {
       if (current.length > 0) {
         blocks.push(current.join("\n").trim());
@@ -58,12 +53,26 @@ function splitIntoBlocks(markdown: string): string[] {
 }
 
 /** Parse a single block into slide elements */
-function parseBlock(block: string): SlideElement[] {
-  const elements: SlideElement[] = [];
+function parseBlock(block: string): ParsedElement[] {
+  const elements: ParsedElement[] = [];
   const lines = block.split("\n");
 
   let hasTitle = false;
   const textLines: string[] = [];
+
+  const flushText = (defaultAlign: TextAlign = "Left") => {
+    if (textLines.length > 0) {
+      const desc = textLines.join("\n").trim();
+      if (desc) {
+        elements.push({
+          type: "Description",
+          text: desc,
+          style: { fontSize: "Medium", align: defaultAlign },
+        });
+      }
+      textLines.length = 0;
+    }
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -72,21 +81,9 @@ function parseBlock(block: string): SlideElement[] {
     // Heading → Title or Subtitle
     const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
     if (headingMatch) {
-      // Flush accumulated text as Description
-      if (textLines.length > 0) {
-        const desc = textLines.join("\n").trim();
-        if (desc) {
-          elements.push({
-            type: "Description",
-            text: desc,
-            style: { fontSize: "Medium", align: "Left" },
-          });
-        }
-        textLines.length = 0;
-      }
-
+      flushText();
       const level = headingMatch[1].length;
-      const text = headingMatch[2].replace(/[*_~`]/g, ""); // strip inline md
+      const text = headingMatch[2].replace(/[*_~`]/g, "");
       elements.push({
         type: level === 1 ? "Title" : "Subtitle",
         text,
@@ -102,19 +99,7 @@ function parseBlock(block: string): SlideElement[] {
     // Image → ContentImage
     const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
     if (imgMatch) {
-      // Flush accumulated text
-      if (textLines.length > 0) {
-        const desc = textLines.join("\n").trim();
-        if (desc) {
-          elements.push({
-            type: "Description",
-            text: desc,
-            style: { fontSize: "Medium", align: "Left" },
-          });
-        }
-        textLines.length = 0;
-      }
-
+      flushText();
       elements.push({
         type: "ContentImage",
         source: { src: imgMatch[2], type: ImageInputType.Url },
@@ -123,29 +108,19 @@ function parseBlock(block: string): SlideElement[] {
       continue;
     }
 
-    // Plain text or inline markdown
     textLines.push(trimmed);
   }
 
-  // Flush remaining text
-  if (textLines.length > 0) {
-    const desc = textLines.join("\n").trim();
-    if (desc) {
-      elements.push({
-        type: "Description",
-        text: desc,
-        style: { fontSize: "Medium", align: "Left" },
-      });
-    }
-  }
+  flushText();
 
   // If no title found, promote first Description to Subtitle
   if (!hasTitle) {
     const descIdx = elements.findIndex((e) => e.type === "Description");
     if (descIdx >= 0) {
+      const desc = elements[descIdx] as Extract<ParsedElement, { type: "Description" }>;
       elements[descIdx] = {
-        ...elements[descIdx],
         type: "Subtitle",
+        text: desc.text,
         style: { fontSize: "Medium", align: "Center" },
       };
     }
@@ -173,20 +148,21 @@ export function parseMarkdownToSlides(
           if (el.type === "ContentImage") {
             return {
               type: "ContentImage" as const,
-              source: el.source as { src: string; type: ImageInputType },
-              style: {
-                opacity: 100,
-                objectFit: "Cover" as const,
-              },
+              source: el.source,
+              style: el.style,
             };
           }
           return {
-            type: el.type as "Title" | "Subtitle" | "Description",
-            text: el.text || "",
-            style: el.style || { fontSize: "Medium", align: "Left" },
+            type: el.type,
+            text: el.text,
+            style: el.style,
           };
         }),
-        backgroundImage: { type: "Image", source: { src: "", type: ImageInputType.Url }, style: { opacity: 30 } },
+        backgroundImage: {
+          type: "Image" as const,
+          source: { src: "", type: ImageInputType.Url },
+          style: { opacity: 30 },
+        },
       });
     }
 
