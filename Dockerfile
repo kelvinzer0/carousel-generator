@@ -7,8 +7,8 @@ RUN pnpm install --frozen-lockfile --prod=false
 
 # Stage 2: Build
 FROM node:20-alpine AS builder
-RUN apk add --no-cache python3 make g++
-ENV PYTHON=/usr/bin/python3
+RUN apk add --no-cache python3 make g++ && \
+    npm config set python /usr/bin/python3
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
