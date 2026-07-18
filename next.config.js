@@ -10,6 +10,8 @@ const nextConfig = {
   // Disable automatic static optimization
   // This prevents Next.js from doing full reloads on route changes
   poweredByHeader: false,
+  // Standalone output for Docker
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
