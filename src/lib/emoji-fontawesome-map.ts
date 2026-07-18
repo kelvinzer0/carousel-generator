@@ -133,7 +133,6 @@ const EMOJI_MAP: Record<string, Omit<EmojiMapping, "emoji">> = {
   "⚖️": { name: "scales", faClass: "fa-scale-balanced", unicode: "\uf24e" },
   "🧲": { name: "magnet", faClass: "fa-magnet", unicode: "\uf076" },
   "🏅": { name: "medal", faClass: "fa-medal", unicode: "\uf5a2" },
-  "💡": { name: "idea", faClass: "fa-lightbulb", unicode: "\uf0eb" },
   "💔": { name: "broken-heart", faClass: "fa-heart-crack", unicode: "\uf7a9" },
   "❣️": { name: "heart-exclaim", faClass: "fa-heart", unicode: "\uf004" },
   "💕": { name: "two-hearts", faClass: "fa-heart", unicode: "\uf004" },
