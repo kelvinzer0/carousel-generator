@@ -1,15 +1,14 @@
 # Stage 1: Install dependencies
-FROM node:20-alpine AS deps
-RUN apk add --no-cache python3 make g++ pixman-dev cairo-dev pango-dev giflib-dev jpeg-dev
+FROM node:20-bookworm-slim AS deps
+RUN apt-get update && apt-get install -y python3 make g++ libpixman-1-dev libcairo2-dev libpango1.0-dev libgif-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-ENV CANVAS_MODULE_PATH=/app/node_modules/.pnpm/canvas@2.11.2_encoding@0.1.13/node_modules/canvas/build/Release/canvas.node
 RUN pnpm install --frozen-lockfile --prod=false
 
 # Stage 2: Build
-FROM node:20-alpine AS builder
-RUN apk add --no-cache python3 make g++ pixman-dev cairo-dev pango-dev giflib-dev jpeg-dev
+FROM node:20-bookworm-slim AS builder
+RUN apt-get update && apt-get install -y python3 make g++ libpixman-1-dev libcairo2-dev libpango1.0-dev libgif-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
