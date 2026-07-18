@@ -1,14 +1,15 @@
 # Stage 1: Install dependencies
 FROM node:20-alpine AS deps
+RUN apk add --no-cache python3 make g++ pixman-dev cairo-dev pango-dev giflib-dev jpeg-dev
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
+ENV CANVAS_MODULE_PATH=/app/node_modules/.pnpm/canvas@2.11.2_encoding@0.1.13/node_modules/canvas/build/Release/canvas.node
 RUN pnpm install --frozen-lockfile --prod=false
 
 # Stage 2: Build
 FROM node:20-alpine AS builder
-RUN apk add --no-cache python3 make g++ && \
-    npm config set python /usr/bin/python3
+RUN apk add --no-cache python3 make g++ pixman-dev cairo-dev pango-dev giflib-dev jpeg-dev
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
