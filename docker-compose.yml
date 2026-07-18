@@ -1,0 +1,18 @@
+services:
+  carousel-generator:
+    image: ghcr.io/kelvinzer0/carousel-generator:latest
+    container_name: carousel-generator
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
