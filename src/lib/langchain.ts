@@ -52,6 +52,33 @@ ${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
 }), null, 2)}
 `;
 
+const SYSTEM_PROMPT_WITH_IMAGES = `
+Create a Carousel of slides from the provided markdown content.
+The markdown may contain image links in the format ![alt](url).
+Preserve image URLs exactly as provided — they will be rendered as content images.
+
+Arguments Schema Instructions:
+ - Respect the argument schema and only use the allowed values for element type: 'Title', 'Subtitle', 'Description'.
+ - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
+
+Guidelines:
+ - Create 8-15 slides based on the content structure.
+ - Each slide has 2-3 different elements.
+ - Split long content across multiple slides logically.
+ - Add Emojis to the text in Title, Subtitle and Description.
+ - Don't add slide numbers.
+ - Description element text should be short.
+
+You MUST respond with valid JSON only, no markdown, no explanation. The JSON must follow this schema:
+${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
+  definitions: {
+    UnstyledTitleSchema,
+    UnstyledSubtitleSchema,
+    UnstyledDescriptionSchema,
+  },
+}), null, 2)}
+`;
+
 export async function generateCarouselSlides(
   topicPrompt: string,
   apiKey: string
