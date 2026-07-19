@@ -54,6 +54,7 @@ Carousel Generator supports **Markdown input** for generating slides — both ma
 | `### Heading` | **Subtitle** within current slide (does NOT start new slide) |
 | `![alt](url)` | **Image** element — `alt` becomes caption, `url` is image source |
 | Plain text | **Description** element (Medium, left-aligned) |
+| `- item` or `* item` | Bullet list in Description (easier to scan than paragraphs) |
 | `---` | Ignored (slide split is driven by `#` / `##` headings) |
 
 ### Image Support
@@ -78,33 +79,42 @@ Boost your workflow with these proven strategies
 
 # Tip 1: Time Blocking
 
-Dedicate specific time slots to focused work. No meetings, no distractions.
+- Dedicate specific time slots to focused work
+- No meetings, no distractions
+- Protect deep work sessions
 
 ![Time Blocking](https://images.unsplash.com/photo-1506905925346-21bda4d32df4)
 
 # Tip 2: The 2-Minute Rule
 
-If a task takes less than 2 minutes, do it immediately.
+- If a task takes less than 2 minutes, do it immediately
+- Small tasks pile up fast — don't let them
 
 # Tip 3: Batch Processing
 
-Group similar tasks together — emails, calls, admin work.
+- Group similar tasks together
+- Emails, calls, admin work — all at once
+- Context switching kills productivity
 
 ![Batch Processing](https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b)
 
 # Tip 4: Take Strategic Breaks
 
-Work in 25-minute sprints (Pomodoro), then take a 5-minute break.
+- Work in 25-minute sprints (Pomodoro)
+- Take a 5-minute break between sprints
+- Rest is part of the process
 
 # Tip 5: Review & Reflect
 
-End each day by reviewing what you accomplished and planning tomorrow.
+- End each day by reviewing accomplishments
+- Plan tomorrow before you log off
+- Celebrate small wins
 
 # Start Today
 
-Pick one tip and implement it this week.
-
-small wins compound into big results.
+- Pick one tip and implement it this week
+- Small wins compound into big results
+- Your future self will thank you
 ```
 
 This generates **7 slides**:
