@@ -13,9 +13,14 @@ import { Input } from "@/components/ui/input";
 
 import { DocumentFormReturn } from "@/lib/document-form-types";
 import { ImageFormField } from "@/components/forms/fields/image-form-field";
+import {
+  SOCIAL_PLATFORMS,
+  SocialPlatform,
+} from "@/lib/validation/brand-schema";
+import { cn } from "@/lib/utils";
 
 export function BrandForm({}: {}) {
-  const form: DocumentFormReturn = useFormContext(); // retrieve those props
+  const form: DocumentFormReturn = useFormContext();
 
   return (
     <Form {...form}>
@@ -41,6 +46,40 @@ export function BrandForm({}: {}) {
               <FormLabel>Handle</FormLabel>
               <FormControl>
                 <Input placeholder="Your handle" className="" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="config.brand.socialPlatform"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Platform Icon</FormLabel>
+              <FormControl>
+                <div className="flex flex-wrap gap-2">
+                  {SOCIAL_PLATFORMS.map((platform) => (
+                    <button
+                      key={platform.value}
+                      type="button"
+                      title={platform.label}
+                      className={cn(
+                        "flex items-center justify-center w-9 h-9 rounded-md border text-sm transition-colors",
+                        field.value === platform.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                      )}
+                      onClick={() => field.onChange(platform.value)}
+                    >
+                      {platform.value === "none" ? (
+                        <span className="text-xs">@</span>
+                      ) : (
+                        <i className={platform.icon} />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

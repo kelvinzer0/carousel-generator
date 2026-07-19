@@ -4,6 +4,7 @@ import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { getTextStyleCSS } from "@/lib/text-style-css";
+import { SOCIAL_PLATFORMS } from "@/lib/validation/brand-schema";
 
 export function Signature({
   config,
@@ -17,6 +18,11 @@ export function Signature({
   const secondaryStyle = config.theme.secondaryStyle;
   const primaryHasGradientTexture = primaryStyle?.useGradient || primaryStyle?.useTexture;
   const secondaryHasGradientTexture = secondaryStyle?.useGradient || secondaryStyle?.useTexture;
+
+  const platform = SOCIAL_PLATFORMS.find(
+    (p) => p.value === (config.brand.socialPlatform || "none")
+  );
+  const platformIcon = platform && platform.value !== "none" ? platform.icon : null;
 
   return (
     <div
@@ -56,6 +62,12 @@ export function Signature({
               : { color: config.theme.secondary }),
           }}
         >
+          {platformIcon && (
+            <i
+              className={`${platformIcon} mr-1.5`}
+              style={{ fontSize: "0.85em" }}
+            />
+          )}
           {config.brand.handle}
         </p>
       </div>

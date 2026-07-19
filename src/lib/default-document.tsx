@@ -21,6 +21,7 @@ export const defaultValues = {
 
       name: "My name",
       handle: "@name",
+      socialPlatform: "none" as const,
     },
     theme: {
       isCustom: false,
