@@ -23,6 +23,7 @@ import { useKeysContext } from "@/lib/providers/keys-context";
 import { useStatusContext } from "@/lib/providers/editor-status-context";
 import { generateCarouselSlidesAction, improveMarkdownAction } from "@/app/actions";
 import { parseMarkdownToSlides } from "@/lib/markdown-to-slides";
+import { useRefetchImages } from "@/lib/hooks/use-refetch-images";
 import { cn } from "@/lib/utils";
 
 const FormSchema = z.object({
@@ -72,6 +73,7 @@ export function AITextAreaForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
   const { setStatus } = useStatusContext();
+  const { refetchSlides } = useRefetchImages();
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -115,8 +117,27 @@ export function AITextAreaForm() {
 
     const slides = parseMarkdownToSlides(data.prompt);
     if (slides && slides.length > 0) {
-      setValue("slides", slides);
-      toast({ title: `Generated ${slides.length} slides from markdown` });
+      // Refetch external images to local blob URLs
+      const hasExternalImages = slides.some((s) =>
+        s.elements.some(
+          (el) =>
+            el.type === "ContentImage" &&
+            el.source.src &&
+            !el.source.src.startsWith("blob:") &&
+            !el.source.src.startsWith("data:")
+        )
+      );
+
+      let finalSlides = slides;
+      if (hasExternalImages) {
+        toast({ title: "Fetching images to local..." });
+        finalSlides = await refetchSlides(slides);
+      }
+
+      setValue("slides", finalSlides);
+      toast({
+        title: `Generated ${finalSlides.length} slides from markdown`,
+      });
     } else {
       toast({ title: "Failed to parse markdown content" });
     }
