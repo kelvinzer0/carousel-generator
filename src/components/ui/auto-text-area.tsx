@@ -79,6 +79,7 @@ const AutoTextarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(textValue) + "\n" }}
         />
         {/* Editable textarea — front, transparent text, visible caret */}
+        {/* @ts-ignore Style works ok */}
         <TextareaAutosize
           {...props}
           value={value}
