@@ -141,6 +141,21 @@ function TextStyleEditor({
         <div className="flex gap-1">
           <Button
             type="button"
+            variant={!useGradient && !useTexture ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setValue(`${stylePath}.useGradient` as any, false);
+              setValue(`${stylePath}.useTexture` as any, false);
+              // Clear stale gradient/texture data so plain textarea renders cleanly
+              setValue(`${stylePath}.gradient` as any, undefined);
+              setValue(`${stylePath}.texture` as any, undefined);
+            }}
+          >
+            Color
+          </Button>
+          <Button
+            type="button"
             variant={useGradient ? "default" : "outline"}
             size="sm"
             className="h-7 text-xs"
