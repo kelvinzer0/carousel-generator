@@ -154,6 +154,123 @@ function parseBlock(block: string): { elements: ParsedElement[]; decorativeEmoji
   return { elements, decorativeEmojis };
 }
 
+/** Estimate pixel height of an element */
+function estimateElementHeight(el: ParsedElement): number {
+  switch (el.type) {
+    case "Title":
+      return 60;
+    case "Subtitle":
+      return 45;
+    case "Description": {
+      // Estimate: ~20px per line, count newlines + bullet count
+      const lines = el.text.split("\n").length;
+      return Math.max(40, lines * 24);
+    }
+    case "ContentImage":
+      return 160; // h-40 = 10rem
+    default:
+      return 40;
+  }
+}
+
+/** Slide height budget (padding + footer + gaps) */
+const SLIDE_PADDING = 80; // 40px top + 40px bottom
+const FOOTER_HEIGHT = 30;
+const ELEMENT_GAP = 8;
+const MIN_IMAGE_SPACE = 180; // image + gap
+
+/** Check if slide has room for an image */
+function hasRoomForImage(elements: ParsedElement[], totalHeight: number): boolean {
+  const usedHeight = elements.reduce((sum, el) => sum + estimateElementHeight(el), 0);
+  const gaps = Math.max(0, elements.length - 1) * ELEMENT_GAP;
+  const estimatedTotal = usedHeight + gaps + SLIDE_PADDING + FOOTER_HEIGHT;
+  // Available is roughly 1080px for standard carousels
+  const availableHeight = 1080;
+  return (availableHeight - estimatedTotal) >= MIN_IMAGE_SPACE;
+}
+
+/**
+ * Redistribute images across slides.
+ * If a slide is too full, move images to the next slide.
+ */
+function redistributeImages(
+  slides: z.infer<typeof MultiSlideSchema>
+): z.infer<typeof MultiSlideSchema> {
+  const result: z.infer<typeof MultiSlideSchema> = [];
+
+  for (let i = 0; i < slides.length; i++) {
+    const slide = slides[i];
+    const elements = slide.elements;
+
+    // Separate images from text elements
+    const textElements = elements.filter((el) => el.type !== "ContentImage");
+    const imageElements = elements.filter((el) => el.type === "ContentImage");
+
+    if (imageElements.length === 0) {
+      // No images, keep as-is
+      result.push(slide);
+      continue;
+    }
+
+    // Check if all images fit on current slide
+    const imagesThatFit: typeof imageElements = [];
+    const imagesOverflow: typeof imageElements = [];
+
+    // Estimate height with text elements
+    const textHeight = textElements.reduce(
+      (sum, el) => sum + estimateElementHeight(el as ParsedElement),
+      0
+    );
+    const textGaps = Math.max(0, textElements.length - 1) * ELEMENT_GAP;
+    const baseHeight = textHeight + textGaps + SLIDE_PADDING + FOOTER_HEIGHT;
+    const availableHeight = 1080;
+    let remainingSpace = availableHeight - baseHeight;
+
+    for (const img of imageElements) {
+      const imgHeight = 160 + ELEMENT_GAP;
+      if (remainingSpace >= imgHeight) {
+        imagesThatFit.push(img);
+        remainingSpace -= imgHeight;
+      } else {
+        imagesOverflow.push(img);
+      }
+    }
+
+    // Current slide: text elements + images that fit
+    const slideElements = [...textElements, ...imagesThatFit];
+    if (slideElements.length > 0) {
+      result.push({
+        ...slide,
+        elements: slideElements,
+      });
+    }
+
+    // Overflow images → next slide(s)
+    if (imagesOverflow.length > 0) {
+      // Check if next slide exists and has room
+      const nextSlide = slides[i + 1];
+      if (nextSlide) {
+        // Insert overflow images at the beginning of next slide
+        const nextElements = [...imagesOverflow, ...nextSlide.elements];
+        slides[i + 1] = { ...nextSlide, elements: nextElements };
+      } else {
+        // Create new slide for overflow images
+        result.push({
+          elements: imagesOverflow,
+          backgroundImage: {
+            type: "Image" as const,
+            source: { src: "", type: ImageInputType.Url },
+            style: { opacity: 30 },
+          },
+          decorativeEmojis: slide.decorativeEmojis,
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
 /** Main parser: markdown string → carousel slides */
 export function parseMarkdownToSlides(
   markdown: string
@@ -192,7 +309,10 @@ export function parseMarkdownToSlides(
       });
     }
 
-    return slides.length > 0 ? slides : null;
+    // Redistribute images — move overflow images to next slides
+    const redistributed = redistributeImages(slides);
+
+    return redistributed.length > 0 ? redistributed : null;
   } catch (err) {
     console.error("parseMarkdownToSlides error:", err);
     return null;
