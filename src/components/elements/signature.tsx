@@ -67,8 +67,8 @@ export function Signature({
           {platformSvg && (
             <svg
               viewBox="0 0 24 24"
-              className="inline-block mr-1.5 align-text-bottom"
-              style={{ width: "0.85em", height: "0.85em" }}
+              className="inline-block mr-1.5 align-middle relative"
+              style={{ width: "1.05em", height: "1.05em", top: "-0.05em" }}
               fill="currentColor"
             >
               <path d={platformSvg} />
