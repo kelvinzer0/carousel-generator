@@ -103,25 +103,29 @@ function applyBlurToCanvas(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const slideRect = slideElement.getBoundingClientRect();
+  // Use slide element dimensions directly — blur layers are absolute inset-0
+  // so they match the slide size. Avoid getBoundingClientRect() which can be
+  // inaccurate during async html-to-image capture.
+  const slideW = canvas.width;
+  const slideH = canvas.height;
 
   blurLayers.forEach((el) => {
     const blurEl = el as HTMLElement;
     const radius = parseInt(blurEl.dataset.blurRadius || "10", 10);
-    const rect = blurEl.getBoundingClientRect();
 
-    const x = Math.round((rect.left - slideRect.left) * scale);
-    const y = Math.round((rect.top - slideRect.top) * scale);
-    const w = Math.round(rect.width * scale);
-    const h = Math.round(rect.height * scale);
+    // Blur layer is absolute inset-0 — covers full slide
+    const x = 0;
+    const y = 0;
+    const w = slideW;
+    const h = slideH;
 
     if (w <= 0 || h <= 0 || radius <= 0) return;
 
-    // Create an OffscreenCanvas with the region content
+    // Create an OffscreenCanvas with the full canvas content
     const offscreen = new OffscreenCanvas(w, h);
     const offCtx = offscreen.getContext("2d")!;
 
-    // Copy the region from main canvas
+    // Copy the full canvas content
     const regionData = ctx.getImageData(x, y, w, h);
     offCtx.putImageData(regionData, 0, 0);
 
@@ -131,7 +135,6 @@ function applyBlurToCanvas(
     // Draw back with blur filter applied
     ctx.save();
     ctx.filter = `blur(${radius}px)`;
-    // Draw the offscreen canvas (with its content) onto main canvas with blur
     ctx.drawImage(offscreen, x, y, w, h);
     ctx.restore();
 
