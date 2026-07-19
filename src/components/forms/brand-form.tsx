@@ -15,6 +15,7 @@ import { DocumentFormReturn } from "@/lib/document-form-types";
 import { ImageFormField } from "@/components/forms/fields/image-form-field";
 import {
   SOCIAL_PLATFORMS,
+  SOCIAL_PLATFORM_SVG,
   SocialPlatform,
 } from "@/lib/validation/brand-schema";
 import { cn } from "@/lib/utils";
@@ -74,8 +75,12 @@ export function BrandForm({}: {}) {
                     >
                       {platform.value === "none" ? (
                         <span className="text-xs">@</span>
+                      ) : SOCIAL_PLATFORM_SVG[platform.value] ? (
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                          <path d={SOCIAL_PLATFORM_SVG[platform.value]} />
+                        </svg>
                       ) : (
-                        <i className={platform.icon} />
+                        <span className="text-xs">?</span>
                       )}
                     </button>
                   ))}

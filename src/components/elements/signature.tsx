@@ -4,7 +4,7 @@ import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useGoogleFont } from "@/lib/hooks/use-google-font";
 import { getTextStyleCSS } from "@/lib/text-style-css";
-import { SOCIAL_PLATFORMS } from "@/lib/validation/brand-schema";
+import { SOCIAL_PLATFORMS, SOCIAL_PLATFORM_SVG } from "@/lib/validation/brand-schema";
 
 export function Signature({
   config,
@@ -22,7 +22,9 @@ export function Signature({
   const platform = SOCIAL_PLATFORMS.find(
     (p) => p.value === (config.brand.socialPlatform || "none")
   );
-  const platformIcon = platform && platform.value !== "none" ? platform.icon : null;
+  const platformSvg = platform && platform.value !== "none"
+    ? SOCIAL_PLATFORM_SVG[platform.value]
+    : null;
 
   return (
     <div
@@ -62,11 +64,15 @@ export function Signature({
               : { color: config.theme.secondary }),
           }}
         >
-          {platformIcon && (
-            <i
-              className={`${platformIcon} mr-1.5`}
-              style={{ fontSize: "0.85em" }}
-            />
+          {platformSvg && (
+            <svg
+              viewBox="0 0 24 24"
+              className="inline-block mr-1.5 align-text-bottom"
+              style={{ width: "0.85em", height: "0.85em" }}
+              fill="currentColor"
+            >
+              <path d={platformSvg} />
+            </svg>
           )}
           {config.brand.handle}
         </p>
