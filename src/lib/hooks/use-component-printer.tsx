@@ -185,20 +185,33 @@ function applyBlurToCanvas(
       }
     });
 
-    // 2. Extract the blur region, blur it, paint back
+    // 2. Extract the blur region, blur it, paint back.
+    // Use a DOM canvas (not OffscreenCanvas) because ctx.filter
+    // is unreliable with OffscreenCanvas in many browsers.
     const regionData = ctx.getImageData(cx, cy, cw, ch);
-    const offscreen = new OffscreenCanvas(cw, ch);
-    const offCtx = offscreen.getContext("2d")!;
-    offCtx.putImageData(regionData, 0, 0);
+    const tmpCanvas = document.createElement("canvas");
+    tmpCanvas.width = cw;
+    tmpCanvas.height = ch;
+    const tmpCtx = tmpCanvas.getContext("2d")!;
+    tmpCtx.putImageData(regionData, 0, 0);
 
     // Clear the blur region on main canvas
     ctx.clearRect(cx, cy, cw, ch);
 
-    // Draw blurred region back
-    ctx.save();
-    ctx.filter = `blur(${radius}px)`;
-    ctx.drawImage(offscreen, cx, cy);
-    ctx.restore();
+    // Draw blurred region back using a second temp canvas
+    // (ctx.filter only works when drawing FROM a source, not on putImageData)
+    const blurCanvas = document.createElement("canvas");
+    blurCanvas.width = cw;
+    blurCanvas.height = ch;
+    const blurCtx = blurCanvas.getContext("2d")!;
+    blurCtx.filter = `blur(${radius}px)`;
+    blurCtx.drawImage(tmpCanvas, 0, 0);
+
+    ctx.drawImage(blurCanvas, cx, cy);
+
+    // Cleanup temp canvases
+    tmpCanvas.remove();
+    blurCanvas.remove();
 
     // 3. Apply tint overlay on the blurred region
     const bgColor = blurEl.style.backgroundColor;
