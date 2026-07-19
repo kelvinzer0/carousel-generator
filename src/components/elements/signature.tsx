@@ -1,5 +1,5 @@
 import React from "react";
-import { ConfigSchema, DocumentSchema } from "@/lib/validation/document-schema";
+import { ConfigSchema } from "@/lib/validation/document-schema";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useGoogleFont } from "@/lib/hooks/use-google-font";
@@ -26,56 +26,62 @@ export function Signature({
     ? SOCIAL_PLATFORM_SVG[platform.value]
     : null;
 
+  const nameStyle: React.CSSProperties = {
+    fontFamily,
+    ...(primaryHasGradientTexture
+      ? getTextStyleCSS(primaryStyle)
+      : { color: config.theme.primary }),
+  };
+
+  const handleColor = config.theme.secondary;
+  const handleTextStyle: React.CSSProperties = {
+    fontFamily,
+    fontSize: "0.875rem",
+    fontWeight: 400,
+    ...(secondaryHasGradientTexture
+      ? getTextStyleCSS(secondaryStyle)
+      : { color: handleColor }),
+  };
+  // SVG icon must use opaque color — not affected by gradient text-clip
+  const iconStyle: React.CSSProperties = {
+    width: "1em",
+    height: "1em",
+    flexShrink: 0,
+    color: handleColor,
+    fontFamily,
+    fontSize: "0.875rem",
+    fontWeight: 400,
+  };
+
   return (
     <div
-      className={`flex justify-start flex-row gap-3 items-center ${cn(
-        className
-      )}`}
+      className={cn("flex justify-start flex-row gap-3 items-center", className)}
     >
       {config.brand.avatar?.source.src && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={config.brand.avatar.source.src}
           alt={config.brand.name}
-          className={`w-12 h-12 rounded-full`}
+          className="w-12 h-12 rounded-full"
           style={{
             opacity: config.brand.avatar.style.opacity / 100,
           }}
         />
       )}
-      <div className={`flex items-start flex-col`}>
-        <p
-          style={{
-            fontFamily,
-            ...(primaryHasGradientTexture
-              ? getTextStyleCSS(primaryStyle)
-              : { color: config.theme.primary }),
-          }}
-        >
-          {config.brand.name}
-        </p>
-        <p
-          style={{
-            fontFamily,
-            fontSize: "0.875rem",
-            fontWeight: 400,
-            ...(secondaryHasGradientTexture
-              ? getTextStyleCSS(secondaryStyle)
-              : { color: config.theme.secondary }),
-          }}
-        >
+      <div className="flex items-start flex-col">
+        <span style={nameStyle}>{config.brand.name}</span>
+        <span className="flex items-center flex-row gap-1.5">
           {platformSvg && (
             <svg
               viewBox="0 0 24 24"
-              className="inline-block mr-1.5 align-middle relative"
-              style={{ width: "1.05em", height: "1.05em", top: "-0.05em" }}
+              style={iconStyle}
               fill="currentColor"
             >
               <path d={platformSvg} />
             </svg>
           )}
-          {config.brand.handle}
-        </p>
+          <span style={handleTextStyle}>{config.brand.handle}</span>
+        </span>
       </div>
     </div>
   );
