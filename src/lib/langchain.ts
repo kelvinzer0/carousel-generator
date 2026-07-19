@@ -135,6 +135,50 @@ export async function generateCarouselSlides(
   }
 }
 
+const MARKDOWN_IMPROVE_PROMPT = `
+You are a carousel content writer. Transform the user's rough input into well-structured markdown for a carousel presentation.
+
+Rules:
+- Use # for slide titles (each # starts a new slide)
+- Use - for bullet points (easier to scan than paragraphs)
+- Use **bold** for emphasis on key terms
+- Use ![alt](url) for images if URLs are provided
+- Keep each slide focused on ONE idea
+- 5-10 slides is ideal
+- Add relevant emojis to titles
+- Description should be bullet points, not paragraphs
+- Be concise: 3-5 bullets per slide max
+
+Output ONLY the markdown, no explanation.
+`;
+
+export async function improveMarkdown(
+  roughInput: string,
+  apiKey: string
+): Promise<string | null> {
+  const model = startModelClient(apiKey);
+
+  try {
+    const result = await model.invoke([
+      new SystemMessage(MARKDOWN_IMPROVE_PROMPT),
+      new HumanMessage(roughInput),
+    ]);
+
+    const content = typeof result.content === "string" ? result.content : "";
+
+    // Extract markdown from response (strip code blocks if present)
+    const cleaned = content
+      .replace(/^```(?:markdown)?\n?/m, "")
+      .replace(/\n?```$/m, "")
+      .trim();
+
+    return cleaned.length > 0 ? cleaned : null;
+  } catch (err) {
+    console.error("improveMarkdown failed:", err);
+    return null;
+  }
+}
+
 function startModelClient(api_key: string) {
   const baseURL = process.env.OPENAI_BASE_URL || undefined;
   const modelName = process.env.OPENAI_MODEL || "gpt-4o-mini";

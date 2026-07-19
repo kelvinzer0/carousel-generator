@@ -21,7 +21,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useKeysContext } from "@/lib/providers/keys-context";
 import { useStatusContext } from "@/lib/providers/editor-status-context";
-import { generateCarouselSlidesAction } from "@/app/actions";
+import { generateCarouselSlidesAction, improveMarkdownAction } from "@/app/actions";
 import { parseMarkdownToSlides } from "@/lib/markdown-to-slides";
 import { cn } from "@/lib/utils";
 
@@ -86,31 +86,39 @@ export function AITextAreaForm() {
     [promptValue]
   );
 
+  async function onImproveWithAI() {
+    const prompt = form.getValues("prompt");
+    if (!prompt || prompt.trim().length < 2) {
+      toast({ title: "Please enter some content first" });
+      return;
+    }
+
+    setIsLoading(true);
+    setStatus("loading");
+
+    const improved = await improveMarkdownAction(prompt);
+
+    if (improved) {
+      form.setValue("prompt", improved);
+      toast({ title: "Markdown improved with AI" });
+    } else {
+      toast({ title: "Failed to improve markdown" });
+    }
+
+    setStatus("ready");
+    setIsLoading(false);
+  }
+
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     setIsLoading(true);
     setStatus("loading");
 
-    const hasImages = imageUrls.length > 0;
-
-    if (hasImages) {
-      const slides = parseMarkdownToSlides(data.prompt);
-      if (slides && slides.length > 0) {
-        setValue("slides", slides);
-        toast({ title: `Generated ${slides.length} slides from markdown` });
-      } else {
-        toast({ title: "Failed to parse markdown content" });
-      }
+    const slides = parseMarkdownToSlides(data.prompt);
+    if (slides && slides.length > 0) {
+      setValue("slides", slides);
+      toast({ title: `Generated ${slides.length} slides from markdown` });
     } else {
-      const generatedSlides = await generateCarouselSlidesAction(
-        `Generate a carousel from this article:\n\n${data.prompt}`
-      );
-
-      if (generatedSlides) {
-        setValue("slides", generatedSlides);
-        toast({ title: "New carousel generated" });
-      } else {
-        toast({ title: "Failed to generate carousel" });
-      }
+      toast({ title: "Failed to parse markdown content" });
     }
 
     setStatus("ready");
@@ -215,18 +223,34 @@ export function AITextAreaForm() {
           </div>
         )}
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <span className="flex flex-row gap-1.5 items-center">
-              <Sparkles className="w-4 h-4" />
-              {imageUrls.length > 0
-                ? `Generate slides from markdown (${imageUrls.length} image${imageUrls.length > 1 ? "s" : ""})`
-                : "Generate with AI"}
-            </span>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            disabled={isLoading}
+            onClick={onImproveWithAI}
+          >
+            {isLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <span className="flex flex-row gap-1.5 items-center">
+                <Sparkles className="w-4 h-4" />
+                Improve with AI
+              </span>
+            )}
+          </Button>
+          <Button type="submit" className="flex-1" disabled={isLoading}>
+            {isLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <span className="flex flex-row gap-1.5 items-center">
+                <Sparkles className="w-4 h-4" />
+                Generate slides
+              </span>
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );
