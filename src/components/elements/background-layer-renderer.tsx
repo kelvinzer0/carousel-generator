@@ -97,18 +97,25 @@ export function BackgroundLayerRenderer({
 
   if (layer.type === "blur" && layer.blur) {
     const { radius, bgColor, bgOpacity } = layer.blur;
+    const tintBg = bgColor
+      ? bgColor + Math.round((bgOpacity / 100) * 255).toString(16).padStart(2, "0")
+      : "transparent";
+
     return (
-      <div
-        className={cn("absolute inset-0", className)}
-        style={{
-          ...baseStyle,
-          backdropFilter: `blur(${radius}px)`,
-          WebkitBackdropFilter: `blur(${radius}px)`,
-          backgroundColor: bgColor
-            ? bgColor + Math.round((bgOpacity / 100) * 255).toString(16).padStart(2, "0")
-            : "transparent",
-        }}
-      />
+      <>
+        {/* Live preview: use native backdrop-filter */}
+        <div
+          className={cn("absolute inset-0", className)}
+          style={{
+            ...baseStyle,
+            backdropFilter: `blur(${radius}px)`,
+            WebkitBackdropFilter: `blur(${radius}px)`,
+            backgroundColor: tintBg,
+          }}
+          data-blur-radius={radius}
+          data-blur-layer="true"
+        />
+      </>
     );
   }
 

@@ -3,7 +3,7 @@ import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 import { useFieldArrayValues } from "@/lib/hooks/use-field-array-values";
 import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
-import { toCanvas, toPng, toJpeg } from "html-to-image";
+import { toCanvas } from "html-to-image";
 import { Options as HtmlToImageOptions } from "html-to-image/lib/types";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
@@ -86,6 +86,144 @@ function withSafeStylesheets<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
+/**
+ * Apply canvas-based blur to regions marked with data-blur-layer.
+ * backdrop-filter is not supported by html-to-image/canvas,
+ * so we post-process the captured canvas to simulate the effect.
+ */
+function applyBlurToCanvas(
+  canvas: HTMLCanvasElement,
+  slideElement: HTMLElement,
+  scale: number
+): void {
+  const blurLayers = slideElement.querySelectorAll('[data-blur-layer="true"]');
+  if (!blurLayers.length) return;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const slideRect = slideElement.getBoundingClientRect();
+
+  blurLayers.forEach((el) => {
+    const blurEl = el as HTMLElement;
+    const radius = parseInt(blurEl.dataset.blurRadius || "10", 10);
+    const rect = blurEl.getBoundingClientRect();
+
+    // Position relative to slide, scaled to canvas
+    const x = Math.round((rect.left - slideRect.left) * scale);
+    const y = Math.round((rect.top - slideRect.top) * scale);
+    const w = Math.round(rect.width * scale);
+    const h = Math.round(rect.height * scale);
+
+    if (w <= 0 || h <= 0 || radius <= 0) return;
+
+    // Extract the region, blur it, put it back
+    const region = ctx.getImageData(x, y, w, h);
+
+    // Apply stack blur (fast approximation of Gaussian)
+    stackBlur(region.data, w, h, Math.round(radius * scale));
+
+    ctx.putImageData(region, x, y);
+
+    // Apply tint overlay if present
+    const bgColor = blurEl.style.backgroundColor;
+    if (bgColor && bgColor !== "transparent") {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(x, y, w, h);
+    }
+  });
+}
+
+/**
+ * Fast stack blur (approximation of Gaussian blur for canvas ImageData).
+ * Based on Mario Klingemann's StackBlur algorithm.
+ */
+function stackBlur(data: Uint8ClampedArray, w: number, h: number, radius: number): void {
+  if (radius < 1) return;
+  radius = Math.round(radius);
+
+  const wm = w - 1;
+  const hm = h - 1;
+  const div = radius + radius + 1;
+  const r = new Int32Array(w * h);
+  const g = new Int32Array(w * h);
+  const b = new Int32Array(w * h);
+  const a = new Int32Array(w * h);
+
+  const rSum = new Int32Array(div);
+  const gSum = new Int32Array(div);
+  const bSum = new Int32Array(div);
+  const aSum = new Int32Array(div);
+
+  // Horizontal pass
+  for (let y = 0; y < h; y++) {
+    let inSumR = 0, inSumG = 0, inSumB = 0, inSumA = 0;
+    let outSumR = 0, outSumG = 0, outSumB = 0, outSumA = 0;
+    let sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+
+    for (let i = -radius; i <= radius; i++) {
+      const idx = (y * w + Math.min(Math.max(i, 0), wm)) * 4;
+      const val = radius + 1 - Math.abs(i);
+      sumR += data[idx] * val;
+      sumG += data[idx + 1] * val;
+      sumB += data[idx + 2] * val;
+      sumA += data[idx + 3] * val;
+      if (i > 0) { inSumR += data[idx]; inSumG += data[idx + 1]; inSumB += data[idx + 2]; inSumA += data[idx + 3]; }
+      else { outSumR += data[idx]; outSumG += data[idx + 1]; outSumB += data[idx + 2]; outSumA += data[idx + 3]; }
+    }
+
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x);
+      r[idx] = Math.round(sumR / div);
+      g[idx] = Math.round(sumG / div);
+      b[idx] = Math.round(sumB / div);
+      a[idx] = Math.round(sumA / div);
+
+      const addIdx = (y * w + Math.min(x + radius + 1, wm)) * 4;
+      const remIdx = (y * w + Math.max(x - radius, 0)) * 4;
+
+      sumR += data[addIdx] - data[remIdx];
+      sumG += data[addIdx + 1] - data[remIdx + 1];
+      sumB += data[addIdx + 2] - data[remIdx + 2];
+      sumA += data[addIdx + 3] - data[remIdx + 3];
+    }
+  }
+
+  // Vertical pass
+  for (let x = 0; x < w; x++) {
+    let inSumR = 0, inSumG = 0, inSumB = 0, inSumA = 0;
+    let outSumR = 0, outSumG = 0, outSumB = 0, outSumA = 0;
+    let sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+
+    for (let i = -radius; i <= radius; i++) {
+      const idx = (Math.min(Math.max(i, 0), hm) * w + x);
+      const val = radius + 1 - Math.abs(i);
+      sumR += r[idx] * val;
+      sumG += g[idx] * val;
+      sumB += b[idx] * val;
+      sumA += a[idx] * val;
+      if (i > 0) { inSumR += r[idx]; inSumG += g[idx]; inSumB += b[idx]; inSumA += a[idx]; }
+      else { outSumR += r[idx]; outSumG += g[idx]; outSumB += b[idx]; outSumA += a[idx]; }
+    }
+
+    for (let y = 0; y < h; y++) {
+      const outIdx = (y * w + x) * 4;
+      data[outIdx] = Math.round(sumR / div);
+      data[outIdx + 1] = Math.round(sumG / div);
+      data[outIdx + 2] = Math.round(sumB / div);
+      data[outIdx + 3] = Math.round(sumA / div);
+
+      const addIdx = (Math.min(y + radius + 1, hm) * w + x);
+      const remIdx = (Math.max(y - radius, 0) * w + x);
+
+      sumR += r[addIdx] - r[remIdx];
+      sumG += g[addIdx] - g[remIdx];
+      sumB += b[addIdx] - b[remIdx];
+      sumA += a[addIdx] - a[remIdx];
+    }
+  }
+}
+
 async function captureSlideToDataUrl(
   slideElement: HTMLElement,
   format: ExportImageFormat,
@@ -123,16 +261,20 @@ async function captureSlideToDataUrl(
 
   try {
     return await withSafeStylesheets(async () => {
-      let dataUrl: string;
+      // Always capture to canvas first (needed for blur post-processing)
+      const canvas = await toCanvas(slideElement, options);
+
+      // Apply canvas-based blur for backdrop-filter layers
+      applyBlurToCanvas(canvas, slideElement, scale);
+
+      // Convert canvas to desired format
       if (format === "png") {
-        dataUrl = await toPng(slideElement, options);
+        return canvas.toDataURL("image/png");
       } else if (format === "webp") {
-        const canvas = await toCanvas(slideElement, options);
-        dataUrl = canvas.toDataURL("image/webp", quality);
+        return canvas.toDataURL("image/webp", quality);
       } else {
-        dataUrl = await toJpeg(slideElement, { ...options, quality });
+        return canvas.toDataURL("image/jpeg", quality);
       }
-      return dataUrl;
     });
   } finally {
     restoreGradient();
