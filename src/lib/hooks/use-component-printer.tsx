@@ -121,7 +121,8 @@ function applyBlurToCanvas(
     const region = ctx.getImageData(x, y, w, h);
 
     // Apply stack blur (fast approximation of Gaussian)
-    stackBlur(region.data, w, h, Math.round(radius * scale));
+    // Don't multiply by scale — blur radius should match the CSS visual size
+    stackBlur(region.data, w, h, radius);
 
     ctx.putImageData(region, x, y);
 
