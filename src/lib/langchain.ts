@@ -152,6 +152,18 @@ Rules:
 - Description should be bullet points, not paragraphs
 - Be concise: 3-5 bullets per slide max
 
+COMPRESSION RULES (CRITICAL):
+- Each bullet MUST be under 8 words when possible
+- Remove filler: "the", "a", "your", "first", "then", "next"
+- Remove politeness: "please", "you need to", "you should"
+- Compress commands: show only the essential command, not explanation
+- Use colon format: **keyword**: short description
+- Bad: "Update the operating system first: sudo su followed by apt update"
+- Good: "Update OS: sudo su && apt update"
+- Bad: "Connect to your VM using SSH: ssh ubuntu@<V2Ray server public IP address>"
+- Good: "SSH: ssh ubuntu@<IP>"
+- Strip obvious context — reader knows they're following a guide
+
 Output ONLY the markdown, no explanation.
 `;
 
