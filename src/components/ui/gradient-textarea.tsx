@@ -4,6 +4,18 @@ import TextareaAutosize from "react-textarea-autosize";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/** Convert inline markdown (bold, italic) to HTML */
+function inlineMarkdownToHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\n/g, "<br/>");
+}
+
 interface GradientTextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   gradientStyle?: React.CSSProperties;
@@ -90,9 +102,8 @@ const GradientTextarea = React.forwardRef<
           zIndex: 0,
         }}
       >
-        {/* Mirror the text content — trailing newline trick for consistent height */}
-        {textValue}
-        {"\n"}
+        {/* Mirror the text content — renders markdown bold/italic, trailing newline for consistent height */}
+        <span dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(textValue) + "\n" }} />
       </div>
 
       {/* Editable textarea — front, transparent text, visible caret */}
