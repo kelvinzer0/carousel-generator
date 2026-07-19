@@ -148,7 +148,7 @@ export function CommonPage({
               >
                 <ContentImage
                   fieldName={currentField as ElementFieldPath}
-                  className="h-40"
+                  className="h-auto"
                 />
               </ElementMenubarWrapper>
             ) : null;

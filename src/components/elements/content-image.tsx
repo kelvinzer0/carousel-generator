@@ -38,11 +38,10 @@ export function ContentImage({
     <div
       id={"content-image-" + fieldName}
       className={cn(
-        "flex flex-col w-full outline-transparent rounded-md ring-offset-background",
+        "flex flex-col h-full w-full outline-transparent rounded-md ring-offset-background",
         currentSelection == fieldName &&
           "outline-input ring-2 ring-offset-2 ring-ring",
-        className,
-        image.style.objectFit == ObjectFitType.enum.Contain && "h-auto"
+        className
       )}
     >
       {/* // TODO: Extract to component */}
@@ -55,7 +54,7 @@ export function ContentImage({
           image.style.objectFit == ObjectFitType.enum.Cover
             ? "object-cover w-full h-full"
             : image.style.objectFit == ObjectFitType.enum.Contain
-            ? "object-contain w-fit h-fit max-h-full"
+            ? "object-contain w-fit h-fit"
             : ""
         )}
         style={{
