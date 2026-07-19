@@ -11,6 +11,7 @@ FROM node:20-bookworm-slim AS builder
 RUN apt-get update && apt-get install -y python3 make g++ libpixman-1-dev libcairo2-dev libpango1.0-dev libgif-dev libjpeg-dev && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
+ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
