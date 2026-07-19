@@ -87,20 +87,24 @@ function withSafeStylesheets<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * Apply canvas-based blur at the correct z-index position.
+ * Apply canvas-based blur to simulate backdrop-filter: blur().
  *
- * backdrop-filter: blur() only affects content BEHIND the element (lower z-index),
- * leaving foreground content (higher z-index) sharp. To simulate this in canvas:
+ * Uses the self-draw + clip technique:
+ * 1. Clip to the blur region
+ * 2. Set ctx.filter = blur(Npx)
+ * 3. Draw the canvas onto itself (filter applies during draw)
+ * 4. Overlay tint color
  *
- * 1. Identify all layers above the blur (foreground) and below (background)
- * 2. Render background layers to a temp canvas, apply Gaussian blur
- * 3. Paint blurred background back, then composite foreground on top
+ * This is the simplest and most compatible approach. ctx.filter with
+ * drawImage(canvas, ...) is well-supported in modern browsers.
+ * No OffscreenCanvas, no getImageData/putImageData needed.
  *
- * Since html-to-image captures a flat composited canvas, we approximate by:
- * - Using the blur layer's DOM position to determine which rendered children
- *   are "behind" vs "in front" of the blur
- * - Separating foreground pixels, blurring the remaining canvas,
- *   then compositing foreground back on top
+ * Note: backdrop-filter only blurs content BEHIND the element.
+ * Since html-to-image produces a flat composited canvas, we blur
+ * the entire region. Foreground content (text, images above the blur
+ * layer) will also get blurred — this is a known limitation of the
+ * canvas post-processing approach. The visual result is still a
+ * frosted-glass effect that closely matches the preview.
  */
 function applyBlurToCanvas(
   canvas: HTMLCanvasElement,
@@ -117,121 +121,43 @@ function applyBlurToCanvas(
   const h = canvas.height;
   if (w <= 0 || h <= 0) return;
 
-  // Blur layers use absolute inset-0 and should cover the full slide.
-  // Use canvas dimensions directly (more reliable than getBoundingClientRect
-  // which can return 0 height when parent has only absolute children).
-  const cx = 0;
-  const cy = 0;
-  const cw = w;
-  const ch = h;
-
-  // slideRect needed for foreground element position calculation
   const slideRect = slideElement.getBoundingClientRect();
 
-  // Process each blur layer in DOM order
   blurLayers.forEach((el) => {
     const blurEl = el as HTMLElement;
     const radius = parseInt(blurEl.dataset.blurRadius || "10", 10);
     if (radius <= 0) return;
 
-    // Collect foreground regions (elements rendered AFTER the blur layer in DOM).
-    // These should remain sharp and be composited on top of the blur.
-    const foregroundRects: { x: number; y: number; w: number; h: number }[] = [];
-    const parent = blurEl.parentElement;
-    if (parent) {
-      const siblings = Array.from(parent.children);
-      const blurIndex = siblings.indexOf(blurEl);
-      for (let i = blurIndex + 1; i < siblings.length; i++) {
-        const sib = siblings[i] as HTMLElement;
-        if (!sib || sib.dataset.blurLayer === "true") continue;
-        const sibRect = sib.getBoundingClientRect();
-        const sx = Math.round((sibRect.left - slideRect.left) * scale);
-        const sy = Math.round((sibRect.top - slideRect.top) * scale);
-        const sw = Math.round(sibRect.width * scale);
-        const sh = Math.round(sibRect.height * scale);
-        if (sw > 0 && sh > 0) {
-          foregroundRects.push({ x: sx, y: sy, w: sw, h: sh });
-        }
-      }
-    }
+    // Get blur region in canvas coordinates
+    const blurRect = blurEl.getBoundingClientRect();
+    const bx = Math.round((blurRect.left - slideRect.left) * scale);
+    const by = Math.round((blurRect.top - slideRect.top) * scale);
+    const bw = Math.round(blurRect.width * scale);
+    const bh = Math.round(blurRect.height * scale);
 
-    // Also capture content ABOVE the blur layer's parent container
-    // (e.g., PageFrame content: title, subtitle, description, footer)
-    const blurContainer = blurEl.closest('[style*="z-index"]') || blurEl.parentElement?.parentElement;
-    if (blurContainer) {
-      let sibling = blurContainer.nextElementSibling;
-      while (sibling) {
-        const sibRect = (sibling as HTMLElement).getBoundingClientRect();
-        const sx = Math.round((sibRect.left - slideRect.left) * scale);
-        const sy = Math.round((sibRect.top - slideRect.top) * scale);
-        const sw = Math.round(sibRect.width * scale);
-        const sh = Math.round(sibRect.height * scale);
-        if (sw > 0 && sh > 0) {
-          foregroundRects.push({ x: sx, y: sy, w: sw, h: sh });
-        }
-        sibling = sibling.nextElementSibling;
-      }
-    }
+    // Fallback to full canvas if getBoundingClientRect returns 0
+    // (happens when parent container only has absolute children)
+    const rx = bw > 0 && bh > 0 ? Math.max(0, bx) : 0;
+    const ry = bw > 0 && bh > 0 ? Math.max(0, by) : 0;
+    const rw = bw > 0 && bh > 0 ? Math.min(bw, w - rx) : w;
+    const rh = bw > 0 && bh > 0 ? Math.min(bh, h - ry) : h;
+    if (rw <= 0 || rh <= 0) return;
 
-    // 1. Save foreground pixels from the blur region
-    const foregroundData: ImageData[] = [];
-    foregroundRects.forEach((r) => {
-      const ix = Math.max(0, r.x);
-      const iy = Math.max(0, r.y);
-      const iw = Math.min(r.w, w - ix);
-      const ih = Math.min(r.h, h - iy);
-      if (iw > 0 && ih > 0) {
-        foregroundData.push(ctx.getImageData(ix, iy, iw, ih));
-      }
-    });
+    // Self-draw with clip + filter: blur only the target region
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rx, ry, rw, rh);
+    ctx.clip();
+    ctx.filter = `blur(${radius}px)`;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
 
-    // 2. Extract the blur region, blur it, paint back.
-    // Use a DOM canvas (not OffscreenCanvas) because ctx.filter
-    // is unreliable with OffscreenCanvas in many browsers.
-    const regionData = ctx.getImageData(cx, cy, cw, ch);
-    const tmpCanvas = document.createElement("canvas");
-    tmpCanvas.width = cw;
-    tmpCanvas.height = ch;
-    const tmpCtx = tmpCanvas.getContext("2d")!;
-    tmpCtx.putImageData(regionData, 0, 0);
-
-    // Clear the blur region on main canvas
-    ctx.clearRect(cx, cy, cw, ch);
-
-    // Draw blurred region back using a second temp canvas
-    // (ctx.filter only works when drawing FROM a source, not on putImageData)
-    const blurCanvas = document.createElement("canvas");
-    blurCanvas.width = cw;
-    blurCanvas.height = ch;
-    const blurCtx = blurCanvas.getContext("2d")!;
-    blurCtx.filter = `blur(${radius}px)`;
-    blurCtx.drawImage(tmpCanvas, 0, 0);
-
-    ctx.drawImage(blurCanvas, cx, cy);
-
-    // Cleanup temp canvases
-    tmpCanvas.remove();
-    blurCanvas.remove();
-
-    // 3. Apply tint overlay on the blurred region
+    // Apply tint overlay on the blurred region
     const bgColor = blurEl.style.backgroundColor;
     if (bgColor && bgColor !== "transparent" && bgColor !== "rgba(0, 0, 0, 0)") {
       ctx.fillStyle = bgColor;
-      ctx.fillRect(cx, cy, cw, ch);
+      ctx.fillRect(rx, ry, rw, rh);
     }
-
-    // 4. Restore foreground pixels on top of the blur
-    let fi = 0;
-    foregroundRects.forEach((r) => {
-      const ix = Math.max(0, r.x);
-      const iy = Math.max(0, r.y);
-      const iw = Math.min(r.w, w - ix);
-      const ih = Math.min(r.h, h - iy);
-      if (iw > 0 && ih > 0 && fi < foregroundData.length) {
-        ctx.putImageData(foregroundData[fi], ix, iy);
-        fi++;
-      }
-    });
   });
 }
 
