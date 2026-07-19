@@ -31,36 +31,27 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
 }
 
 function hideUIElements(slideElement: HTMLElement): () => void {
-  const hidden: { el: HTMLElement; display: string }[] = [];
+  // Use a CSS class + style tag to hide UI elements during capture.
+  // This survives React re-renders (unlike holding stale DOM references).
+  const styleId = "hide-ui-for-capture";
+  const existing = document.getElementById(styleId);
+  if (existing) existing.remove();
 
-  const selectors = [
-    '[id^="add-element-"]',
-    '[id^="element-menubar-"]',
-    '[id^="slide-menubar-"]',
-    '[data-slot="tooltip-trigger"]',
-  ];
-
-  selectors.forEach((selector) => {
-    slideElement.querySelectorAll(selector).forEach((el) => {
-      const htmlEl = el as HTMLElement;
-      hidden.push({ el: htmlEl, display: htmlEl.style.display });
-      htmlEl.style.display = "none";
-    });
-  });
-
-  slideElement.querySelectorAll("button").forEach((btn) => {
-    const htmlBtn = btn as HTMLElement;
-    const text = htmlBtn.textContent?.trim();
-    if (text === "+" || text === "" || htmlBtn.querySelector("svg")) {
-      hidden.push({ el: htmlBtn, display: htmlBtn.style.display });
-      htmlBtn.style.display = "none";
+  const style = document.createElement("style");
+  style.id = styleId;
+  style.textContent = `
+    [id^="add-element-"],
+    [id^="element-menubar-"],
+    [id^="slide-menubar-"],
+    [data-slot="tooltip-trigger"] {
+      display: none !important;
     }
-  });
+  `;
+  document.head.appendChild(style);
 
   return () => {
-    hidden.forEach(({ el, display }) => {
-      el.style.display = display;
-    });
+    const s = document.getElementById(styleId);
+    if (s) s.remove();
   };
 }
 
