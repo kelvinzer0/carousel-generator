@@ -55,7 +55,7 @@ export function ContentImage({
           image.style.objectFit == ObjectFitType.enum.Cover
             ? "object-cover w-full h-full"
             : image.style.objectFit == ObjectFitType.enum.Contain
-            ? "object-contain w-full max-h-full"
+            ? "object-contain w-fit h-fit max-h-full"
             : ""
         )}
         style={{
