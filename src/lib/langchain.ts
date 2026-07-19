@@ -34,6 +34,10 @@ Arguments Schema Instructions:
  - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
  - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis. These will be rendered as decorative background elements.
 
+Slide Structure (REQUIRED):
+ - FIRST slide MUST be Intro/Hook: attention-grabbing title + 1-2 teaser bullets
+ - LAST slide MUST be Outro/CTA: summary + "Follow for more" + "Save this"
+
 Guidelines:
  - Create 8-15 slides.
  - Each slide has 2-3 different elements. E.g. [Title, Description], or [Title, Subtitle], or [Subtitle, Description].
@@ -41,7 +45,8 @@ Guidelines:
  - Adapt, reorganize and rephrase the content to fit the slides format.
  - Do NOT add emojis to Title, Subtitle, or Description text. Keep text clean.
  - Don't add slide numbers.
- - Description element text should be short.
+ - Description element text should be short (under 8 words per bullet).
+ - Remove filler words. Be direct.
 
 You MUST respond with valid JSON only, no markdown, no explanation. The JSON must follow this schema:
 ${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
@@ -63,13 +68,18 @@ Arguments Schema Instructions:
  - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
  - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis. These will be rendered as decorative background elements.
 
+Slide Structure (REQUIRED):
+ - FIRST slide MUST be Intro/Hook: attention-grabbing title + 1-2 teaser bullets
+ - LAST slide MUST be Outro/CTA: summary + "Follow for more" + "Save this"
+
 Guidelines:
  - Create 8-15 slides based on the content structure.
  - Each slide has 2-3 different elements.
  - Split long content across multiple slides logically.
  - Do NOT add emojis to Title, Subtitle, or Description text. Keep text clean.
  - Don't add slide numbers.
- - Description element text should be short.
+ - Description element text should be short (under 8 words per bullet).
+ - Remove filler words. Be direct.
 
 You MUST respond with valid JSON only, no markdown, no explanation. The JSON must follow this schema:
 ${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
@@ -151,6 +161,19 @@ Rules:
 - After each slide, add a line: <!-- emojis: emoji1 emoji2 emoji3 --> (3-6 relevant emojis)
 - Description should be bullet points, not paragraphs
 - Be concise: 3-5 bullets per slide max
+
+SLIDE STRUCTURE (REQUIRED):
+- FIRST slide MUST be an Intro/Hook slide:
+  - Title: attention-grabbing question or bold statement (under 8 words)
+  - Description: 1-2 short bullets teasing what they'll learn
+  - Make reader curious — use numbers, contrroversy, or "how to"
+  - Examples: "You're doing X wrong", "5 secrets about Y", "How to Z in 10 min"
+- LAST slide MUST be an Outro/CTA slide:
+  - Title: summary or motivational closing
+  - Description:
+    - One bullet summarizing the key takeaway
+    - One bullet: "Follow for more tips" or "Follow @yourhandle"
+    - One bullet: "Save this for later" or "Share with someone who needs this"
 
 COMPRESSION RULES (CRITICAL):
 - Each bullet MUST be under 8 words when possible
