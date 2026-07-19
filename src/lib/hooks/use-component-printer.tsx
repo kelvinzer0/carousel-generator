@@ -117,6 +117,15 @@ function applyBlurToCanvas(
   const h = canvas.height;
   if (w <= 0 || h <= 0) return;
 
+  // Blur layers use absolute inset-0 and should cover the full slide.
+  // Use canvas dimensions directly (more reliable than getBoundingClientRect
+  // which can return 0 height when parent has only absolute children).
+  const cx = 0;
+  const cy = 0;
+  const cw = w;
+  const ch = h;
+
+  // slideRect needed for foreground element position calculation
   const slideRect = slideElement.getBoundingClientRect();
 
   // Process each blur layer in DOM order
@@ -124,22 +133,6 @@ function applyBlurToCanvas(
     const blurEl = el as HTMLElement;
     const radius = parseInt(blurEl.dataset.blurRadius || "10", 10);
     if (radius <= 0) return;
-
-    // Get blur element position in slide coordinates, scaled to canvas
-    const blurRect = blurEl.getBoundingClientRect();
-    const bx = Math.round((blurRect.left - slideRect.left) * scale);
-    const by = Math.round((blurRect.top - slideRect.top) * scale);
-    const bw = Math.round(blurRect.width * scale);
-    const bh = Math.round(blurRect.height * scale);
-
-    if (bw <= 0 || bh <= 0) return;
-
-    // Clamp to canvas bounds
-    const cx = Math.max(0, bx);
-    const cy = Math.max(0, by);
-    const cw = Math.min(bw, w - cx);
-    const ch = Math.min(bh, h - cy);
-    if (cw <= 0 || ch <= 0) return;
 
     // Collect foreground regions (elements rendered AFTER the blur layer in DOM).
     // These should remain sharp and be composited on top of the blur.
