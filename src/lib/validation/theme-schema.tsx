@@ -53,7 +53,7 @@ export const TextStyleSchema = z.object({
 // Background Layer
 export const BackgroundLayerItemSchema = z.object({
   id: z.string(),
-  type: z.enum(["color", "gradient", "image", "pattern"]),
+  type: z.enum(["color", "gradient", "image", "pattern", "blur"]),
   opacity: z.number().min(0).max(100).default(100),
   visible: z.boolean().default(true),
   color: z.string().optional(),
@@ -63,6 +63,11 @@ export const BackgroundLayerItemSchema = z.object({
     fit: z.enum(["cover", "contain"]).default("cover"),
   }).optional(),
   pattern: PatternSchema.optional(),
+  blur: z.object({
+    radius: z.number().min(0).max(50).default(10),
+    bgColor: z.string().optional(),
+    bgOpacity: z.number().min(0).max(100).default(0),
+  }).optional(),
 });
 
 export const BackgroundLayersSchema = z.array(BackgroundLayerItemSchema).default([]);

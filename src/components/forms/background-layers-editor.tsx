@@ -721,7 +721,7 @@ export function BackgroundLayersEditor() {
     form.setValue("config.theme.backgroundLayers", newLayers, { shouldDirty: true });
   };
 
-  const addLayer = (type: "color" | "gradient" | "image" | "pattern") => {
+  const addLayer = (type: "color" | "gradient" | "image" | "pattern" | "blur") => {
     const id = `layer-${Date.now()}`;
     const currentLayers = form.getValues("config.theme.backgroundLayers") || [];
     const newLayer: BackgroundLayerItemType = {
@@ -752,6 +752,15 @@ export function BackgroundLayersEditor() {
               iconSize: 28,
               patternSize: 80,
               fill: "solid" as const,
+            },
+          }
+        : {}),
+      ...(type === "blur"
+        ? {
+            blur: {
+              radius: 10,
+              bgColor: "#000000",
+              bgOpacity: 0,
             },
           }
         : {}),
@@ -795,6 +804,7 @@ export function BackgroundLayersEditor() {
               {layer.type === "gradient" && <Layers className="w-4 h-4 text-purple-500" />}
               {layer.type === "image" && <ImageIcon className="w-4 h-4 text-green-500" />}
               {layer.type === "pattern" && <Sparkles className="w-4 h-4 text-amber-500" />}
+              {layer.type === "blur" && <i className="fa-solid fa-droplet w-4 h-4 text-cyan-500 text-sm" />}
 
               <span className="text-xs font-medium capitalize flex-1">
                 {layer.type}
@@ -887,6 +897,57 @@ export function BackgroundLayersEditor() {
             {layer.type === "image" && (
               <ImageLayerEditor layer={layer} index={index} onUpdate={updateLayer} />
             )}
+
+            {layer.type === "blur" && layer.blur && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs w-16">Radius</Label>
+                  <Slider
+                    value={[layer.blur.radius]}
+                    onValueChange={([v]) =>
+                      updateLayer(index, { blur: { ...layer.blur!, radius: v } })
+                    }
+                    min={0}
+                    max={50}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-xs w-10 text-right">{layer.blur.radius}px</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs w-16">Tint</Label>
+                  <input
+                    type="color"
+                    value={layer.blur.bgColor || "#000000"}
+                    onChange={(e) =>
+                      updateLayer(index, { blur: { ...layer.blur!, bgColor: e.target.value } })
+                    }
+                    className="w-8 h-8 rounded cursor-pointer"
+                  />
+                  <Input
+                    value={layer.blur.bgColor || "#000000"}
+                    onChange={(e) =>
+                      updateLayer(index, { blur: { ...layer.blur!, bgColor: e.target.value } })
+                    }
+                    className="h-8 text-xs flex-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs w-16">Tint Opacity</Label>
+                  <Slider
+                    value={[layer.blur.bgOpacity]}
+                    onValueChange={([v]) =>
+                      updateLayer(index, { blur: { ...layer.blur!, bgOpacity: v } })
+                    }
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-xs w-10 text-right">{layer.blur.bgOpacity}%</span>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -904,6 +965,9 @@ export function BackgroundLayersEditor() {
         </Button>
         <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => addLayer("image")}>
           <ImageIcon className="w-3 h-3 mr-1" /> Image
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 text-xs col-span-2" onClick={() => addLayer("blur")}>
+          <i className="fa-solid fa-droplet mr-1 text-sm" /> Blur Glass
         </Button>
       </div>
     </div>

@@ -41,7 +41,7 @@ export function Signature({
           }}
         />
       )}
-      <div className={`flex items-start flex-col`}>
+      <div className={`flex items-start flex-col min-w-0 flex-1`}>
         <p
           className={cn(`text-base`)}
           style={{

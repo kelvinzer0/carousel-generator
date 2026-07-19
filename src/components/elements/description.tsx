@@ -34,6 +34,7 @@ export function Description({
 
   const plainStyle: React.CSSProperties = {
     fontFamily,
+    whiteSpace: "pre-wrap",
     ...(hasGradientTexture ? {} : { color: config.theme.secondary }),
   };
 

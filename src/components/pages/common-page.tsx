@@ -159,12 +159,10 @@ export function CommonPage({
               </ElementMenubarWrapper>
             ) : null;
           })}
-          {/* // TODO Replace 50 by the element size of element to introduce or minimum of all elements */}
-          {remainingHeight && remainingHeight >= 50 ? (
-            <AddElement
-              fieldName={(fieldName + ".elements") as ElementArrayFieldPath}
-            />
-          ) : null}
+          {/* Always show add element button */}
+          <AddElement
+            fieldName={(fieldName + ".elements") as ElementArrayFieldPath}
+          />
         </PageLayout>
         <Footer number={index + 1} config={config} ref={footerRef} />
       </PageFrame>
