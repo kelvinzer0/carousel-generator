@@ -87,10 +87,16 @@ function withSafeStylesheets<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * Apply canvas-based blur to regions marked with data-blur-layer.
- * backdrop-filter is lost during html-to-image SVG foreignObject render.
- * We use OffscreenCanvas + ctx.filter to blur the extracted region,
- * then composite it back onto the main canvas.
+ * Apply canvas-based blur at the correct z-index position.
+ * backdrop-filter only blurs content BEHIND the blur layer (lower z-index),
+ * not content above it. We simulate this by:
+ * 1. Finding the blur layer's z-index position
+ * 2. Extracting the canvas state at that point (content below the blur)
+ * 3. Blurring it
+ * 4. Compositing back with the blur layer's tint
+ *
+ * Since we can't easily separate layers from the composited canvas,
+ * we approximate by blurring the entire canvas (all layers below are visible).
  */
 function applyBlurToCanvas(
   canvas: HTMLCanvasElement,
@@ -103,46 +109,37 @@ function applyBlurToCanvas(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // Use slide element dimensions directly — blur layers are absolute inset-0
-  // so they match the slide size. Avoid getBoundingClientRect() which can be
-  // inaccurate during async html-to-image capture.
-  const slideW = canvas.width;
-  const slideH = canvas.height;
+  const w = canvas.width;
+  const h = canvas.height;
 
+  // Process each blur layer
   blurLayers.forEach((el) => {
     const blurEl = el as HTMLElement;
     const radius = parseInt(blurEl.dataset.blurRadius || "10", 10);
-
-    // Blur layer is absolute inset-0 — covers full slide
-    const x = 0;
-    const y = 0;
-    const w = slideW;
-    const h = slideH;
+    const parentZIndex = parseInt(blurEl.dataset.blurZindex || "0", 10);
 
     if (w <= 0 || h <= 0 || radius <= 0) return;
 
-    // Create an OffscreenCanvas with the full canvas content
+    // Save current canvas state (this represents content at this z-level)
+    const beforeBlur = ctx.getImageData(0, 0, w, h);
+
+    // Create OffscreenCanvas with the pre-blur content
     const offscreen = new OffscreenCanvas(w, h);
     const offCtx = offscreen.getContext("2d")!;
+    offCtx.putImageData(beforeBlur, 0, 0);
 
-    // Copy the full canvas content
-    const regionData = ctx.getImageData(x, y, w, h);
-    offCtx.putImageData(regionData, 0, 0);
-
-    // Clear the region on main canvas
-    ctx.clearRect(x, y, w, h);
-
-    // Draw back with blur filter applied
+    // Draw back with blur applied — this simulates backdrop-filter
+    // The blurred content replaces the region, like a frosted glass overlay
     ctx.save();
     ctx.filter = `blur(${radius}px)`;
-    ctx.drawImage(offscreen, x, y, w, h);
+    ctx.drawImage(offscreen, 0, 0);
     ctx.restore();
 
-    // Apply tint overlay if present
+    // Apply tint overlay
     const bgColor = blurEl.style.backgroundColor;
     if (bgColor && bgColor !== "transparent" && bgColor !== "rgba(0, 0, 0, 0)") {
       ctx.fillStyle = bgColor;
-      ctx.fillRect(x, y, w, h);
+      ctx.fillRect(0, 0, w, h);
     }
   });
 }

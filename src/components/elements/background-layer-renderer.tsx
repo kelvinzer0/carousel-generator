@@ -112,8 +112,9 @@ export function BackgroundLayerRenderer({
             WebkitBackdropFilter: `blur(${radius}px)`,
             backgroundColor: tintBg,
           }}
-          data-blur-radius={radius}
           data-blur-layer="true"
+          data-blur-radius={radius}
+          data-blur-zindex={style?.zIndex ?? 0}
         />
       </>
     );
