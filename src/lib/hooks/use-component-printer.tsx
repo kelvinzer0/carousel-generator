@@ -88,8 +88,9 @@ function withSafeStylesheets<T>(fn: () => Promise<T>): Promise<T> {
 
 /**
  * Apply canvas-based blur to regions marked with data-blur-layer.
- * backdrop-filter is not supported by html-to-image (SVG foreignObject),
- * so we post-process the captured canvas using ctx.filter = 'blur()'.
+ * backdrop-filter is lost during html-to-image SVG foreignObject render.
+ * We use OffscreenCanvas + ctx.filter to blur the extracted region,
+ * then composite it back onto the main canvas.
  */
 function applyBlurToCanvas(
   canvas: HTMLCanvasElement,
@@ -116,17 +117,22 @@ function applyBlurToCanvas(
 
     if (w <= 0 || h <= 0 || radius <= 0) return;
 
-    // Extract the region to a temp canvas
-    const tmpCanvas = document.createElement("canvas");
-    tmpCanvas.width = w;
-    tmpCanvas.height = h;
-    const tmpCtx = tmpCanvas.getContext("2d")!;
-    tmpCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+    // Create an OffscreenCanvas with the region content
+    const offscreen = new OffscreenCanvas(w, h);
+    const offCtx = offscreen.getContext("2d")!;
 
-    // Apply blur via native canvas filter and redraw
+    // Copy the region from main canvas
+    const regionData = ctx.getImageData(x, y, w, h);
+    offCtx.putImageData(regionData, 0, 0);
+
+    // Clear the region on main canvas
+    ctx.clearRect(x, y, w, h);
+
+    // Draw back with blur filter applied
     ctx.save();
     ctx.filter = `blur(${radius}px)`;
-    ctx.drawImage(tmpCanvas, x, y, w, h);
+    // Draw the offscreen canvas (with its content) onto main canvas with blur
+    ctx.drawImage(offscreen, x, y, w, h);
     ctx.restore();
 
     // Apply tint overlay if present
