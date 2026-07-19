@@ -143,7 +143,30 @@ function applyBlurToCanvas(
     const rh = bw > 0 && bh > 0 ? Math.min(bh, h - ry) : h;
     if (rw <= 0 || rh <= 0) return;
 
-    // Self-draw with clip + filter: blur only the target region
+    // backdrop-filter: blur() only affects content BEHIND the element.
+    // The tint (backgroundColor) sits ON TOP and is NOT blurred.
+    //
+    // html-to-image renders the tint into the canvas, so we need to:
+    // 1. Clear the tint from the canvas (leaving transparent)
+    // 2. Blur only the background content
+    // 3. Re-apply the tint (sharp, not blurred)
+    //
+    // Without step 1, the tint gets blurred AND re-applied = double effect.
+
+    const bgColor = blurEl.style.backgroundColor;
+    const hasTint = bgColor && bgColor !== "transparent" && bgColor !== "rgba(0, 0, 0, 0)";
+
+    // Step 1: Clear the tint that html-to-image rendered
+    if (hasTint) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(rx, ry, rw, rh);
+      ctx.clip();
+      ctx.clearRect(rx, ry, rw, rh);
+      ctx.restore();
+    }
+
+    // Step 2: Blur the background content (now without tint)
     ctx.save();
     ctx.beginPath();
     ctx.rect(rx, ry, rw, rh);
@@ -152,10 +175,9 @@ function applyBlurToCanvas(
     ctx.drawImage(canvas, 0, 0);
     ctx.restore();
 
-    // Apply tint overlay on the blurred region
-    const bgColor = blurEl.style.backgroundColor;
-    if (bgColor && bgColor !== "transparent" && bgColor !== "rgba(0, 0, 0, 0)") {
-      ctx.fillStyle = bgColor;
+    // Step 3: Re-apply tint ONCE (sharp, not blurred)
+    if (hasTint) {
+      ctx.fillStyle = bgColor!;
       ctx.fillRect(rx, ry, rw, rh);
     }
   });
