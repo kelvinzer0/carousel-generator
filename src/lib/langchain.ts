@@ -32,13 +32,14 @@ Arguments Schema Instructions:
  - Respect the argument schema and only use the allowed values for element type, which are 'Title', 'Subtitle' and 'Description'.
  - Each slide can use the multiple elements and they can be of different type or not.
  - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
+ - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis. These will be rendered as decorative background elements.
 
 Guidelines:
  - Create 8-15 slides.
  - Each slide has 2-3 different elements. E.g. [Title, Description], or [Title, Subtitle], or [Subtitle, Description].
  - Each slide All the elements in that slide are about that idea.
  - Adapt, reorganize and rephrase the content to fit the slides format.
- - Add Emojis to the text in Title, Subtitle and Description.
+ - Do NOT add emojis to Title, Subtitle, or Description text. Keep text clean.
  - Don't add slide numbers.
  - Description element text should be short.
 
@@ -60,12 +61,13 @@ Preserve image URLs exactly as provided — they will be rendered as content ima
 Arguments Schema Instructions:
  - Respect the argument schema and only use the allowed values for element type: 'Title', 'Subtitle', 'Description'.
  - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
+ - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis. These will be rendered as decorative background elements.
 
 Guidelines:
  - Create 8-15 slides based on the content structure.
  - Each slide has 2-3 different elements.
  - Split long content across multiple slides logically.
- - Add Emojis to the text in Title, Subtitle and Description.
+ - Do NOT add emojis to Title, Subtitle, or Description text. Keep text clean.
  - Don't add slide numbers.
  - Description element text should be short.
 
@@ -145,7 +147,8 @@ Rules:
 - Use ![alt](url) for images if URLs are provided
 - Keep each slide focused on ONE idea
 - 5-10 slides is ideal
-- Add relevant emojis to titles
+- Do NOT add emojis to text. Text must be clean.
+- After each slide, add a line: <!-- emojis: emoji1 emoji2 emoji3 --> (3-6 relevant emojis)
 - Description should be bullet points, not paragraphs
 - Be concise: 3-5 bullets per slide max
 

@@ -35,6 +35,7 @@ export const ElementSchema = z.discriminatedUnion("type", [
 
 export const UnstyledSlideSchema = z.object({
   elements: z.array(UnstyledElementSchema).max(3),
+  decorativeEmojis: z.array(z.string()).optional(),
 });
 
 // TODO: Convert into: elements prop with an array of discriminated union of types
@@ -42,6 +43,7 @@ export const CommonSlideSchema = z.object({
   elements: z.array(ElementSchema).default([]),
   backgroundImage: ImageSchema.default(DEFAULT_BACKGROUND_IMAGE_INPUT),
   backgroundLayers: BackgroundLayersSchema.optional(),
+  decorativeEmojis: z.array(z.string()).optional(),
 });
 
 export const UnstyledMultiSlideSchema = z.array(UnstyledSlideSchema);

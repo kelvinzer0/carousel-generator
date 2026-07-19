@@ -52,10 +52,35 @@ function splitIntoBlocks(markdown: string): string[] {
   return blocks.filter((b) => b.length > 0);
 }
 
+/** Extract decorative emojis from <!-- emojis: ... --> comments */
+function extractDecorativeEmojis(block: string): string[] {
+  const emojiRegex = /<!--\s*emojis?:\s*([^>]+)-->/i;
+  const match = block.match(emojiRegex);
+  if (!match) return [];
+
+  // Extract individual emoji characters
+  const emojiStr = match[1].trim();
+  const emojis: string[] = [];
+  // Match emoji characters (including compound emojis)
+  const emojiChars = emojiStr.match(/\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu);
+  if (emojiChars) {
+    emojis.push(...emojiChars);
+  }
+  return emojis;
+}
+
+/** Remove <!-- emojis: ... --> comments from text */
+function stripEmojiComments(text: string): string {
+  return text.replace(/<!--\s*emojis?:\s*[^>]*-->/gi, "").trim();
+}
+
 /** Parse a single block into slide elements */
-function parseBlock(block: string): ParsedElement[] {
+function parseBlock(block: string): { elements: ParsedElement[]; decorativeEmojis: string[] } {
   const elements: ParsedElement[] = [];
-  const lines = block.split("\n");
+  const cleanedBlock = stripEmojiComments(block);
+  const lines = cleanedBlock.split("\n");
+
+  const decorativeEmojis = extractDecorativeEmojis(block);
 
   let hasTitle = false;
   const textLines: string[] = [];
@@ -126,7 +151,7 @@ function parseBlock(block: string): ParsedElement[] {
     }
   }
 
-  return elements;
+  return { elements, decorativeEmojis };
 }
 
 /** Main parser: markdown string → carousel slides */
@@ -140,7 +165,7 @@ export function parseMarkdownToSlides(
     const slides: z.infer<typeof MultiSlideSchema> = [];
 
     for (const block of blocks) {
-      const elements = parseBlock(block);
+      const { elements, decorativeEmojis } = parseBlock(block);
       if (elements.length === 0) continue;
 
       slides.push({
@@ -163,6 +188,7 @@ export function parseMarkdownToSlides(
           source: { src: "", type: ImageInputType.Url },
           style: { opacity: 30 },
         },
+        decorativeEmojis: decorativeEmojis.length > 0 ? decorativeEmojis : undefined,
       });
     }
 

@@ -22,6 +22,7 @@ import { PageLayout } from "@/components/pages/page-layout";
 import { AddElement } from "@/components/pages/add-element";
 import { ElementType } from "@/lib/validation/element-type";
 import { ContentImage } from "@/components/elements/content-image";
+import { DecorativeEmojis } from "@/components/elements/decorative-emojis";
 import ElementMenubarWrapper from "@/components/element-menubar-wrapper";
 import { useElementSize } from "usehooks-ts";
 
@@ -98,6 +99,11 @@ export function CommonPage({
       {/* Legacy slide background image */}
       {slide.backgroundImage?.source.src ? (
         <BackgroundImageLayer image={slide.backgroundImage} className="z-[1]" />
+      ) : null}
+
+      {/* Decorative emojis from AI */}
+      {slide.decorativeEmojis && slide.decorativeEmojis.length > 0 ? (
+        <DecorativeEmojis emojis={slide.decorativeEmojis} />
       ) : null}
       <PageFrame
         fieldName={backgroundImageField}
