@@ -29,24 +29,19 @@ const SYSTEM_PROMPT = `
 Create a Carousel of slides following these rules
 
 Arguments Schema Instructions:
- - Respect the argument schema and only use the allowed values for element type, which are 'Title', 'Subtitle' and 'Description'.
- - Each slide can use the multiple elements and they can be of different type or not.
+ - Respect the argument schema and only use the allowed values for element type: 'Title', 'Subtitle', 'Description'.
  - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
- - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis. These will be rendered as decorative background elements.
+ - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis.
 
-Slide Structure (REQUIRED):
- - FIRST slide MUST be Intro/Hook: attention-grabbing title + 1-2 teaser bullets
- - LAST slide MUST be Outro/CTA: summary + "Follow for more" + "Save this"
+Slide Structure:
+ - FIRST slide: Intro/Hook — catchy title + 1-2 teaser bullets
+ - LAST slide: Outro/CTA — summary + "Follow for more" + "Save this"
 
 Guidelines:
- - Create 8-15 slides.
- - Each slide has 2-3 different elements. E.g. [Title, Description], or [Title, Subtitle], or [Subtitle, Description].
- - Each slide All the elements in that slide are about that idea.
- - Adapt, reorganize and rephrase the content to fit the slides format.
- - Do NOT add emojis to Title, Subtitle, or Description text. Keep text clean.
- - Don't add slide numbers.
- - Description element text should be short (under 8 words per bullet).
- - Remove filler words. Be direct.
+ - 5-10 slides.
+ - Each slide has 2-3 elements: [Title, Description], [Title, Subtitle], [Subtitle, Description].
+ - Do NOT add emojis to text. Keep text clean.
+ - Description bullets: concise but readable.
 
 You MUST respond with valid JSON only, no markdown, no explanation. The JSON must follow this schema:
 ${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
@@ -60,26 +55,29 @@ ${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
 
 const SYSTEM_PROMPT_WITH_IMAGES = `
 Create a Carousel of slides from the provided markdown content.
-The markdown may contain image links in the format ![alt](url).
-Preserve image URLs exactly as provided — they will be rendered as content images.
+
+CRITICAL IMAGE RULES:
+ - The markdown contains images in format ![alt](url)
+ - You MUST preserve EVERY image URL exactly as provided
+ - Each image becomes a ContentImage element with source: { src: "URL", type: "Url" }
+ - DO NOT drop, replace, or modify any image URLs
+ - If input has 3 images, output MUST have 3 images
 
 Arguments Schema Instructions:
- - Respect the argument schema and only use the allowed values for element type: 'Title', 'Subtitle', 'Description'.
+ - Respect the argument schema and only use the allowed values for element type: 'Title', 'Subtitle', 'Description', 'ContentImage'.
  - Respect the 'maxLength' value which is the maximum number of characters in a given field. Write less than 70% of that number.
- - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis. These will be rendered as decorative background elements.
+ - Each slide MUST include a 'decorativeEmojis' array with 3-6 relevant emojis.
 
-Slide Structure (REQUIRED):
- - FIRST slide MUST be Intro/Hook: attention-grabbing title + 1-2 teaser bullets
- - LAST slide MUST be Outro/CTA: summary + "Follow for more" + "Save this"
+Slide Structure:
+ - FIRST slide: Intro/Hook — catchy title + 1-2 teaser bullets
+ - LAST slide: Outro/CTA — summary + "Follow for more" + "Save this"
+ - Middle slides: content from the article
 
 Guidelines:
- - Create 8-15 slides based on the content structure.
- - Each slide has 2-3 different elements.
- - Split long content across multiple slides logically.
- - Do NOT add emojis to Title, Subtitle, or Description text. Keep text clean.
- - Don't add slide numbers.
- - Description element text should be short (under 8 words per bullet).
- - Remove filler words. Be direct.
+ - 5-10 slides based on content length.
+ - Each slide has 2-3 elements (Title, Subtitle, Description, or ContentImage).
+ - Do NOT add emojis to text. Keep text clean.
+ - Description bullets should be concise but readable.
 
 You MUST respond with valid JSON only, no markdown, no explanation. The JSON must follow this schema:
 ${JSON.stringify(zodToJsonSchema(UnstyledDocumentSchema, {
@@ -148,46 +146,37 @@ export async function generateCarouselSlides(
 }
 
 const MARKDOWN_IMPROVE_PROMPT = `
-You are a carousel content writer. Transform the user's rough input into well-structured markdown for a carousel presentation.
+You are a carousel content writer. Transform the user's input into well-structured markdown for a carousel.
 
-Rules:
-- Use # for slide titles (each # starts a new slide)
-- Use - for bullet points (easier to scan than paragraphs)
-- Use **bold** for emphasis on key terms
-- Use ![alt](url) for images if URLs are provided
-- Keep each slide focused on ONE idea
-- 5-10 slides is ideal
-- Do NOT add emojis to text. Text must be clean.
-- After each slide, add a line: <!-- emojis: emoji1 emoji2 emoji3 --> (3-6 relevant emojis)
-- Description should be bullet points, not paragraphs
-- Be concise: 3-5 bullets per slide max
+## Format
+- # Title starts a new slide
+- - bullet points for descriptions
+- **bold** for key terms
+- ![alt](url) for images
 
-SLIDE STRUCTURE (REQUIRED):
-- FIRST slide MUST be an Intro/Hook slide:
-  - Title: attention-grabbing question or bold statement (under 8 words)
-  - Description: 1-2 short bullets teasing what they'll learn
-  - Make reader curious — use numbers, contrroversy, or "how to"
-  - Examples: "You're doing X wrong", "5 secrets about Y", "How to Z in 10 min"
-- LAST slide MUST be an Outro/CTA slide:
-  - Title: summary or motivational closing
-  - Description:
-    - One bullet summarizing the key takeaway
-    - One bullet: "Follow for more tips" or "Follow @yourhandle"
-    - One bullet: "Save this for later" or "Share with someone who needs this"
+## CRITICAL: Image Handling
+- PRESERVE ALL existing ![alt](url) from the original input
+- DO NOT remove, replace, or modify any image URLs
+- Place images on the slide where they make most sense
+- If original has images, your output MUST have the same images
 
-COMPRESSION RULES (CRITICAL):
-- Each bullet MUST be under 8 words when possible
-- Remove filler: "the", "a", "your", "first", "then", "next"
-- Remove politeness: "please", "you need to", "you should"
-- Compress commands: show only the essential command, not explanation
-- Use colon format: **keyword**: short description
-- Bad: "Update the operating system first: sudo su followed by apt update"
-- Good: "Update OS: sudo su && apt update"
-- Bad: "Connect to your VM using SSH: ssh ubuntu@<V2Ray server public IP address>"
-- Good: "SSH: ssh ubuntu@<IP>"
-- Strip obvious context — reader knows they're following a guide
+## Structure
+- 5-10 slides
+- Each slide: 1 title + 2-4 bullets
+- 3-5 bullets per slide max
+- FIRST slide: Intro/Hook — catchy title that makes people want to keep reading
+- LAST slide: Outro/CTA — "Follow for more" / "Save this for later"
+- After each slide, add: <!-- emojis: 🎯 💡 ⚡ --> (3-6 relevant emojis)
 
-Output ONLY the markdown, no explanation.
+## Writing Style
+- Clean text, NO emojis in titles or bullets
+- Concise but not cryptic — keep it readable
+- Remove filler words (the, a, your, first, then)
+- Commands: show the command, brief context after colon
+  - Good: "Install: bash <(curl -sL URL)"
+  - Bad: "Execute the install script by running: bash <(curl -sL URL)"
+
+Output ONLY the markdown. No explanation.
 `;
 
 export async function improveMarkdown(
@@ -195,6 +184,14 @@ export async function improveMarkdown(
   apiKey: string
 ): Promise<string | null> {
   const model = startModelClient(apiKey);
+
+  // Extract original image URLs for validation
+  const originalImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+  const originalImages: string[] = [];
+  let imgMatch;
+  while ((imgMatch = originalImageRegex.exec(roughInput)) !== null) {
+    originalImages.push(imgMatch[1]);
+  }
 
   try {
     const result = await model.invoke([
@@ -210,7 +207,27 @@ export async function improveMarkdown(
       .replace(/\n?```$/m, "")
       .trim();
 
-    return cleaned.length > 0 ? cleaned : null;
+    if (cleaned.length === 0) return null;
+
+    // Validate image preservation
+    if (originalImages.length > 0) {
+      const missingImages = originalImages.filter(
+        (url) => !cleaned.includes(url)
+      );
+      if (missingImages.length > 0) {
+        console.warn(
+          `AI dropped ${missingImages.length} image(s):`,
+          missingImages
+        );
+        // Re-add missing images at the end
+        const imageMarkdown = missingImages
+          .map((url) => `![](${url})`)
+          .join("\n");
+        return cleaned + "\n\n" + imageMarkdown;
+      }
+    }
+
+    return cleaned;
   } catch (err) {
     console.error("improveMarkdown failed:", err);
     return null;
