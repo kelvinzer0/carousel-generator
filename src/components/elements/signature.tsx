@@ -43,9 +43,8 @@ export function Signature({
           }}
         />
       )}
-      <div className={`flex items-start flex-col min-w-0 flex-1`}>
+      <div className={`flex items-start flex-col`}>
         <p
-          className={cn(`text-base`)}
           style={{
             fontFamily,
             ...(primaryHasGradientTexture
@@ -56,9 +55,10 @@ export function Signature({
           {config.brand.name}
         </p>
         <p
-          className={cn(`text-sm font-normal`)}
           style={{
             fontFamily,
+            fontSize: "0.875rem",
+            fontWeight: 400,
             ...(secondaryHasGradientTexture
               ? getTextStyleCSS(secondaryStyle)
               : { color: config.theme.secondary }),
