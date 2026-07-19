@@ -64,6 +64,37 @@ function hideUIElements(slideElement: HTMLElement): () => void {
   };
 }
 
+/**
+ * Temporarily patches CSSStyleSheet.prototype.cssRules to gracefully
+ * skip cross-origin stylesheets (e.g. Google Fonts) that throw
+ * SecurityError when accessed from a different origin.
+ */
+function withSafeStylesheets<T>(fn: () => Promise<T>): Promise<T> {
+  const sheets = document.styleSheets;
+  const origDesc = Object.getOwnPropertyDescriptor(
+    CSSStyleSheet.prototype,
+    "cssRules"
+  );
+  if (!origDesc) return fn();
+
+  // Replace getter with one that returns empty list on CORS errors
+  Object.defineProperty(CSSStyleSheet.prototype, "cssRules", {
+    get() {
+      try {
+        return origDesc.get!.call(this);
+      } catch {
+        return [];
+      }
+    },
+    configurable: true,
+  });
+
+  return fn().finally(() => {
+    // Restore original getter
+    Object.defineProperty(CSSStyleSheet.prototype, "cssRules", origDesc);
+  });
+}
+
 async function captureSlideToDataUrl(
   slideElement: HTMLElement,
   format: ExportImageFormat,
@@ -86,19 +117,32 @@ async function captureSlideToDataUrl(
       padding: "0",
     },
     cacheBust: true,
+    // Skip cross-origin stylesheets (e.g. Google Fonts) to avoid
+    // SecurityError: Cannot access cssRules on cross-origin CSSStyleSheet
+    filter: (node: HTMLElement) => {
+      if (node.tagName === "LINK") {
+        const href = node.getAttribute("href") || "";
+        if (href.startsWith("http") && !href.startsWith(window.location.origin)) {
+          return false;
+        }
+      }
+      return true;
+    },
   };
 
   try {
-    let dataUrl: string;
-    if (format === "png") {
-      dataUrl = await toPng(slideElement, options);
-    } else if (format === "webp") {
-      const canvas = await toCanvas(slideElement, options);
-      dataUrl = canvas.toDataURL("image/webp", quality);
-    } else {
-      dataUrl = await toJpeg(slideElement, { ...options, quality });
-    }
-    return dataUrl;
+    return await withSafeStylesheets(async () => {
+      let dataUrl: string;
+      if (format === "png") {
+        dataUrl = await toPng(slideElement, options);
+      } else if (format === "webp") {
+        const canvas = await toCanvas(slideElement, options);
+        dataUrl = canvas.toDataURL("image/webp", quality);
+      } else {
+        dataUrl = await toJpeg(slideElement, { ...options, quality });
+      }
+      return dataUrl;
+    });
   } finally {
     restoreGradient();
     restoreUI();
