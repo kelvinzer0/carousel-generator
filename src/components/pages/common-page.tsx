@@ -70,7 +70,11 @@ export function CommonPage({
   return (
     <PageBase size={size} fieldName={backgroundImageField}>
       {/* Background layers container */}
-      <div className="absolute inset-0" style={{ zIndex: 0 }}>
+      {/* Explicit width/height prevents container collapse when all children are absolute */}
+      <div
+        className="absolute inset-0"
+        style={{ zIndex: 0, width: `${size.width}px`, height: `${size.height}px` }}
+      >
         {/* Global background layers (theme-level) */}
         {config.theme.backgroundLayers && config.theme.backgroundLayers.length > 0 ? (
           config.theme.backgroundLayers.map((layer, i) => (

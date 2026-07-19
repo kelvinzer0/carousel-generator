@@ -101,22 +101,29 @@ export function BackgroundLayerRenderer({
       ? bgColor + Math.round((bgOpacity / 100) * 255).toString(16).padStart(2, "0")
       : "transparent";
 
+    // Use explicit inset (top/right/bottom/left = 0) instead of width/height 100%.
+    // Percentage dimensions can fail in html-to-image's SVG foreignObject rendering.
+    // Also omit width/height from baseStyle to avoid conflicts with inset.
+    const blurStyle: React.CSSProperties = {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      opacity: layer.opacity / 100,
+      backdropFilter: `blur(${radius}px)`,
+      WebkitBackdropFilter: `blur(${radius}px)`,
+      backgroundColor: tintBg,
+    };
+
     return (
-      <>
-        {/* Live preview: use native backdrop-filter */}
-        <div
-          className={cn("absolute inset-0", className)}
-          style={{
-            ...baseStyle,
-            backdropFilter: `blur(${radius}px)`,
-            WebkitBackdropFilter: `blur(${radius}px)`,
-            backgroundColor: tintBg,
-          }}
-          data-blur-layer="true"
-          data-blur-radius={radius}
-          data-blur-zindex={style?.zIndex ?? 0}
-        />
-      </>
+      <div
+        className={cn(className)}
+        style={blurStyle}
+        data-blur-layer="true"
+        data-blur-radius={radius}
+        data-blur-zindex={style?.zIndex ?? 0}
+      />
     );
   }
 
