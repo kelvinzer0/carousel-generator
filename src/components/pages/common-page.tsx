@@ -74,6 +74,7 @@ export function CommonPage({
       <div
         className="absolute inset-0"
         style={{ zIndex: 0, width: `${size.width}px`, height: `${size.height}px` }}
+        data-bg-layers-container="true"
       >
         {/* Global background layers (theme-level) */}
         {config.theme.backgroundLayers && config.theme.backgroundLayers.length > 0 ? (

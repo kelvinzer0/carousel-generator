@@ -87,100 +87,116 @@ function withSafeStylesheets<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * Apply canvas-based blur to simulate backdrop-filter: blur().
- *
- * Uses the self-draw + clip technique:
- * 1. Clip to the blur region
- * 2. Set ctx.filter = blur(Npx)
- * 3. Draw the canvas onto itself (filter applies during draw)
- * 4. Overlay tint color
- *
- * This is the simplest and most compatible approach. ctx.filter with
- * drawImage(canvas, ...) is well-supported in modern browsers.
- * No OffscreenCanvas, no getImageData/putImageData needed.
- *
- * Note: backdrop-filter only blurs content BEHIND the element.
- * Since html-to-image produces a flat composited canvas, we blur
- * the entire region. Foreground content (text, images above the blur
- * layer) will also get blurred — this is a known limitation of the
- * canvas post-processing approach. The visual result is still a
- * frosted-glass effect that closely matches the preview.
+ * Collect blur layer metadata from the DOM for pre-processing.
  */
-function applyBlurToCanvas(
-  canvas: HTMLCanvasElement,
-  slideElement: HTMLElement,
-  scale: number
-): void {
+interface BlurLayerInfo {
+  element: HTMLElement;
+  radius: number;
+  zIndex: number;
+  bgColor: string;
+  hasTint: boolean;
+}
+
+function getBlurLayerInfos(slideElement: HTMLElement): BlurLayerInfo[] {
   const blurLayers = slideElement.querySelectorAll('[data-blur-layer="true"]');
-  if (!blurLayers.length) return;
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const w = canvas.width;
-  const h = canvas.height;
-  if (w <= 0 || h <= 0) return;
-
-  const slideRect = slideElement.getBoundingClientRect();
-
+  const infos: BlurLayerInfo[] = [];
   blurLayers.forEach((el) => {
     const blurEl = el as HTMLElement;
     const radius = parseInt(blurEl.dataset.blurRadius || "10", 10);
     if (radius <= 0) return;
-
-    // Get blur region in canvas coordinates
-    const blurRect = blurEl.getBoundingClientRect();
-    const bx = Math.round((blurRect.left - slideRect.left) * scale);
-    const by = Math.round((blurRect.top - slideRect.top) * scale);
-    const bw = Math.round(blurRect.width * scale);
-    const bh = Math.round(blurRect.height * scale);
-
-    // Fallback to full canvas if getBoundingClientRect returns 0
-    // (happens when parent container only has absolute children)
-    const rx = bw > 0 && bh > 0 ? Math.max(0, bx) : 0;
-    const ry = bw > 0 && bh > 0 ? Math.max(0, by) : 0;
-    const rw = bw > 0 && bh > 0 ? Math.min(bw, w - rx) : w;
-    const rh = bw > 0 && bh > 0 ? Math.min(bh, h - ry) : h;
-    if (rw <= 0 || rh <= 0) return;
-
-    // backdrop-filter: blur() only affects content BEHIND the element.
-    // The tint (backgroundColor) sits ON TOP and is NOT blurred.
-    //
-    // html-to-image renders the tint into the canvas, so we need to:
-    // 1. Clear the tint from the canvas (leaving transparent)
-    // 2. Blur only the background content
-    // 3. Re-apply the tint (sharp, not blurred)
-    //
-    // Without step 1, the tint gets blurred AND re-applied = double effect.
-
+    const zIndex = parseInt(blurEl.dataset.blurZindex || "0", 10);
     const bgColor = blurEl.style.backgroundColor;
-    const hasTint = bgColor && bgColor !== "transparent" && bgColor !== "rgba(0, 0, 0, 0)";
-
-    // Step 1: Clear the tint that html-to-image rendered
-    if (hasTint) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(rx, ry, rw, rh);
-      ctx.clip();
-      ctx.clearRect(rx, ry, rw, rh);
-      ctx.restore();
-    }
-
-    // Step 2: Blur the background content (now without tint)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(rx, ry, rw, rh);
-    ctx.clip();
-    ctx.filter = `blur(${radius}px)`;
-    ctx.drawImage(canvas, 0, 0);
-    ctx.restore();
-
-    // Step 3: Re-apply tint ONCE (sharp, not blurred)
-    if (hasTint) {
-      ctx.fillStyle = bgColor!;
-      ctx.fillRect(rx, ry, rw, rh);
-    }
+    const hasTint =
+      !!bgColor &&
+      bgColor !== "transparent" &&
+      bgColor !== "rgba(0, 0, 0, 0)";
+    infos.push({ element: blurEl, radius, zIndex, bgColor, hasTint });
   });
+  return infos;
+}
+
+/**
+ * DOM-level pre-processing to simulate backdrop-filter: blur() for export.
+ *
+ * Problem: html-to-image cannot render CSS backdrop-filter. The old approach
+ * tried to post-process the canvas, but since html-to-image produces a flat
+ * composited bitmap, it was impossible to separate foreground from background
+ * content — the blur leaked into text and other foreground elements.
+ *
+ * Solution: Before capture, we convert the backdrop-filter effect into standard
+ * CSS filter: blur() applied directly to each background layer element that sits
+ * below the blur layer. Since each layer is absolutely positioned, applying
+ * filter: blur() to it blurs only that layer's content — the same effect as
+ * backdrop-filter blurring all content behind the element.
+ *
+ * Steps per blur layer:
+ *   1. Find all sibling elements in the background container with a lower
+ *      z-index (these are "behind" the blur layer).
+ *   2. Add filter: blur(Npx) to each of those elements' inline styles.
+ *   3. Remove backdrop-filter from the blur layer itself (keep backgroundColor
+ *      for the tint overlay).
+ *   4. Foreground content (text, images with higher z-index) is untouched.
+ *
+ * After capture, all inline style changes are reverted.
+ *
+ * @returns A cleanup function that restores styles to their original state.
+ */
+function preProcessBlurLayers(slideElement: HTMLElement): () => void {
+  const blurInfos = getBlurLayerInfos(slideElement);
+  if (blurInfos.length === 0) return () => {};
+
+  const bgContainer = slideElement.querySelector(
+    '[data-bg-layers-container="true"]'
+  ) as HTMLElement | null;
+
+  if (!bgContainer) return () => {};
+
+  const styleRestores: { el: HTMLElement; prop: string; orig: string }[] = [];
+
+  blurInfos.forEach((info) => {
+    // Find siblings in the background container that are BELOW this blur layer
+    const siblings = Array.from(bgContainer.children) as HTMLElement[];
+
+    for (const sib of siblings) {
+      if (sib === info.element) continue;
+      const sibZIndex = parseInt(sib.style.zIndex || "0", 10);
+      if (sibZIndex < info.zIndex) {
+        // Save original filter value and apply blur
+        styleRestores.push({
+          el: sib,
+          prop: "filter",
+          orig: sib.style.filter,
+        });
+        // Combine with any existing filter
+        const existingFilter = sib.style.filter;
+        sib.style.filter = existingFilter
+          ? `${existingFilter} blur(${info.radius}px)`
+          : `blur(${info.radius}px)`;
+      }
+    }
+
+    // Remove backdrop-filter from the blur layer (keep backgroundColor for tint)
+    styleRestores.push({
+      el: info.element,
+      prop: "backdropFilter",
+      orig: info.element.style.backdropFilter,
+    });
+    styleRestores.push({
+      el: info.element,
+      prop: "WebkitBackdropFilter",
+      orig: (info.element.style as any).WebkitBackdropFilter || "",
+    });
+    info.element.style.backdropFilter = "none";
+    (info.element.style as any).WebkitBackdropFilter = "none";
+  });
+
+  return () => {
+    // Restore all modified styles in reverse order
+    for (let i = styleRestores.length - 1; i >= 0; i--) {
+      const { el, prop, orig } = styleRestores[i];
+      (el.style as any)[prop] = orig;
+    }
+  };
 }
 
 async function captureSlideToDataUrl(
@@ -194,7 +210,7 @@ async function captureSlideToDataUrl(
   await preloadTextures(slideElement);
   const restoreGradient = prerenderGradientText(slideElement);
 
-  const options: HtmlToImageOptions = {
+  const baseOptions: HtmlToImageOptions = {
     width: slideElement.offsetWidth,
     height: slideElement.offsetHeight,
     canvasWidth: slideElement.offsetWidth * scale,
@@ -205,8 +221,6 @@ async function captureSlideToDataUrl(
       padding: "0",
     },
     cacheBust: true,
-    // Skip cross-origin stylesheets (e.g. Google Fonts) to avoid
-    // SecurityError: Cannot access cssRules on cross-origin CSSStyleSheet
     filter: (node: HTMLElement) => {
       if (node.tagName === "LINK") {
         const href = node.getAttribute("href") || "";
@@ -220,24 +234,35 @@ async function captureSlideToDataUrl(
 
   try {
     return await withSafeStylesheets(async () => {
-      // Always capture to canvas first (needed for blur post-processing)
-      const canvas = await toCanvas(slideElement, options);
+      // Pre-process: convert backdrop-filter to CSS filter on wrapper divs
+      // so html-to-image can render the blur correctly in a single pass.
+      const restoreBlurPreProcess = preProcessBlurLayers(slideElement);
 
-      // Apply canvas-based blur for backdrop-filter layers
-      applyBlurToCanvas(canvas, slideElement, scale);
+      const canvas = await toCanvas(slideElement, baseOptions);
 
-      // Convert canvas to desired format
-      if (format === "png") {
-        return canvas.toDataURL("image/png");
-      } else if (format === "webp") {
-        return canvas.toDataURL("image/webp", quality);
-      } else {
-        return canvas.toDataURL("image/jpeg", quality);
-      }
+      // Restore DOM after capture
+      restoreBlurPreProcess();
+
+      return canvasToDataUrl(canvas, format, quality);
     });
   } finally {
     restoreGradient();
     restoreUI();
+  }
+}
+
+/** Convert a canvas to a data URL in the specified format. */
+function canvasToDataUrl(
+  canvas: HTMLCanvasElement,
+  format: ExportImageFormat,
+  quality: number
+): string {
+  if (format === "png") {
+    return canvas.toDataURL("image/png");
+  } else if (format === "webp") {
+    return canvas.toDataURL("image/webp", quality);
+  } else {
+    return canvas.toDataURL("image/jpeg", quality);
   }
 }
 
