@@ -82,7 +82,7 @@ export function Signature({
               <path d={platformSvg} />
             </svg>
           )}
-          <span style={handleTextStyle} className="truncate">{config.brand.handle}</span>
+          <span style={handleTextStyle}>{config.brand.handle}</span>
         </span>
       </div>
     </div>
