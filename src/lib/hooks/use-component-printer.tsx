@@ -31,60 +31,68 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
 }
 
 /**
- * Preload all <img> elements inside a slide to ensure they are fully loaded
- * before html-to-image attempts to inline them as data URLs.
- * Returns a cleanup function that restores original src on broken images.
+ * Convert a blob: or http(s) URL to a data URL by fetching it.
+ * For blob URLs that can't be fetched (e.g. revoked), returns a transparent pixel.
+ */
+async function urlToDataUrl(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Fetch returned ${response.status}`);
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    // Fallback: transparent 1x1 pixel
+    return "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  }
+}
+
+/**
+ * Preprocess all <img> elements inside a slide before html-to-image capture.
+ *
+ * - blob: URLs are converted to data: URLs (html-to-image can't fetch blob URLs
+ *   from inside SVG foreignObject, causing ERR_FILE_NOT_FOUND).
+ * - Broken / unloaded images are replaced with a transparent pixel placeholder.
+ *
+ * Returns a cleanup function that restores the original src values.
  */
 async function preloadContentImages(slideElement: HTMLElement): Promise<() => void> {
   const images = Array.from(slideElement.querySelectorAll("img"));
-  const brokenImages: { img: HTMLImageElement; originalSrc: string }[] = [];
+  const restoredImages: { img: HTMLImageElement; originalSrc: string }[] = [];
 
-  const loadPromises = images.map(
-    (img) =>
-      new Promise<void>((resolve) => {
-        const htmlImg = img as HTMLImageElement;
-        if (htmlImg.complete && htmlImg.naturalWidth > 0) {
-          resolve();
-          return;
-        }
+  const conversions = images.map(async (img) => {
+    const htmlImg = img as HTMLImageElement;
+    const originalSrc = htmlImg.src;
 
-        const originalSrc = htmlImg.src;
+    if (!originalSrc || originalSrc.startsWith("data:")) return;
 
-        const onLoad = () => {
-          cleanup();
-          resolve();
-        };
+    // blob: URLs and external http(s): URLs both need to become data: URLs
+    // so html-to-image can inline them without fetching.
+    const needsConversion =
+      originalSrc.startsWith("blob:") || originalSrc.startsWith("http");
 
-        const onError = () => {
-          cleanup();
-          console.warn("Image failed to load during export, using placeholder:", originalSrc);
-          brokenImages.push({ img: htmlImg, originalSrc });
-          // Replace with a 1x1 transparent pixel so html-to-image can still inline it
-          htmlImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-          resolve();
-        };
+    if (needsConversion) {
+      const dataUrl = await urlToDataUrl(originalSrc);
+      htmlImg.src = dataUrl;
+      restoredImages.push({ img: htmlImg, originalSrc });
+      return;
+    }
 
-        const cleanup = () => {
-          htmlImg.removeEventListener("load", onLoad);
-          htmlImg.removeEventListener("error", onError);
-        };
+    // For any other src that hasn't loaded yet, replace with placeholder
+    if (!htmlImg.complete || htmlImg.naturalWidth === 0) {
+      htmlImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+      restoredImages.push({ img: htmlImg, originalSrc });
+    }
+  });
 
-        htmlImg.addEventListener("load", onLoad, { once: true });
-        htmlImg.addEventListener("error", onError, { once: true });
-
-        // If the image has no src or is already a placeholder, resolve immediately
-        if (!originalSrc || originalSrc.startsWith("data:")) {
-          cleanup();
-          resolve();
-        }
-      })
-  );
-
-  await Promise.all(loadPromises);
+  await Promise.all(conversions);
 
   return () => {
-    // Restore broken images to their original src after export
-    brokenImages.forEach(({ img, originalSrc }) => {
+    restoredImages.forEach(({ img, originalSrc }) => {
       img.src = originalSrc;
     });
   };
