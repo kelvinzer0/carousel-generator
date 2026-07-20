@@ -9,6 +9,7 @@ import { jsPDF } from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { prerenderGradientText, preloadTextures } from "@/lib/prerender-gradient-text";
+import { embedFontsForExport } from "@/lib/google-fonts";
 import {
   uploadPdfToRemixPost,
   uploadImagesToRemixPost,
@@ -271,12 +272,17 @@ async function captureSlideToDataUrl(
   slideElement: HTMLElement,
   format: ExportImageFormat,
   quality: number,
-  scale: number = IMAGE_EXPORT_SCALE
+  scale: number = IMAGE_EXPORT_SCALE,
+  fontIds: string[] = []
 ): Promise<string> {
   const restoreUI = hideUIElements(slideElement);
   await document.fonts.ready;
   await preloadTextures(slideElement);
   const restoreContentImages = await preloadContentImages(slideElement);
+  // Embed fonts as @font-face data URIs so html-to-image SVG rendering
+  // has access to the correct typefaces (SVG foreignObject is isolated
+  // from the parent document's font cache and cross-origin link tags).
+  const removeFontEmbeds = await embedFontsForExport(slideElement, fontIds);
   const restoreGradient = prerenderGradientText(slideElement);
 
   const baseOptions: HtmlToImageOptions = {
@@ -290,32 +296,21 @@ async function captureSlideToDataUrl(
       padding: "0",
     },
     cacheBust: true,
-    filter: (node: HTMLElement) => {
-      if (node.tagName === "LINK") {
-        const href = node.getAttribute("href") || "";
-        if (href.startsWith("http") && !href.startsWith(window.location.origin)) {
-          return false;
-        }
-      }
-      return true;
-    },
+    // Do NOT filter out external <link> tags here — withSafeStylesheets
+    // already handles the CORS SecurityError gracefully. Removing the filter
+    // allows html-to-image to inline any accessible CSS rules.
   };
 
   try {
     return await withSafeStylesheets(async () => {
-      // Pre-process: convert backdrop-filter to CSS filter on wrapper divs
-      // so html-to-image can render the blur correctly in a single pass.
       const restoreBlurPreProcess = preProcessBlurLayers(slideElement);
-
       const canvas = await toCanvas(slideElement, baseOptions);
-
-      // Restore DOM after capture
       restoreBlurPreProcess();
-
       return canvasToDataUrl(canvas, format, quality);
     });
   } finally {
     restoreGradient();
+    removeFontEmbeds();
     restoreContentImages();
     restoreUI();
   }
@@ -355,6 +350,15 @@ export function useComponentPrinter() {
     "linkedin") as SizePresetKey;
   const SIZE = SIZE_PRESETS[sizePresetKey] || SIZE_PRESETS.linkedin;
 
+  // Font IDs used on this document — passed to captureSlideToDataUrl so
+  // they get embedded as @font-face data URIs before html-to-image capture.
+  const font1 = watch("config.fonts.font1") || "DM_Serif_Display";
+  const font2 = watch("config.fonts.font2") || "DM_Sans";
+  const fontIds = React.useMemo(
+    () => [...new Set([font1, font2].filter(Boolean))],
+    [font1, font2]
+  );
+
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -386,7 +390,8 @@ export function useComponentPrinter() {
           pageContent,
           "jpeg",
           0.95,
-          IMAGE_EXPORT_SCALE
+          IMAGE_EXPORT_SCALE,
+          fontIds
         );
 
         if (i > 0) pdf.addPage();
@@ -402,7 +407,7 @@ export function useComponentPrinter() {
     } finally {
       setIsPrinting(false);
     }
-  }, [watch, SIZE]);
+  }, [watch, SIZE, fontIds]);
 
   // ── Download Images (ZIP) ─────────────────────────────────────
 
@@ -429,7 +434,9 @@ export function useComponentPrinter() {
           const dataUrl = await captureSlideToDataUrl(
             pageContent,
             format,
-            quality
+            quality,
+            IMAGE_EXPORT_SCALE,
+            fontIds
           );
           const res = await fetch(dataUrl);
           const blob = await res.blob();
@@ -480,7 +487,8 @@ export function useComponentPrinter() {
             pageContent,
             "jpeg",
             0.95,
-            IMAGE_EXPORT_SCALE
+            IMAGE_EXPORT_SCALE,
+            fontIds
           );
 
           if (i > 0) pdf.addPage();
@@ -499,7 +507,7 @@ export function useComponentPrinter() {
         setIsUploading(false);
       }
     },
-    [watch, SIZE]
+    [watch, SIZE, fontIds]
   );
 
   // ── Upload Images to RemixPost ────────────────────────────────
@@ -532,7 +540,9 @@ export function useComponentPrinter() {
           const dataUrl = await captureSlideToDataUrl(
             pageContent,
             format,
-            quality
+            quality,
+            IMAGE_EXPORT_SCALE,
+            fontIds
           );
           const blob = dataUrlToBlob(dataUrl);
           const ext = FORMAT_EXT[format];
@@ -555,7 +565,7 @@ export function useComponentPrinter() {
         setIsUploading(false);
       }
     },
-    [watch, numPages]
+    [watch, numPages, fontIds]
   );
 
   return {

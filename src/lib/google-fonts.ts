@@ -193,3 +193,134 @@ export function getFontFamily(fontId: string): string {
 export async function preloadFonts(fontIds: string[]): Promise<void> {
   await Promise.allSettled(fontIds.map((id) => loadGoogleFont(id)));
 }
+
+// Cache for embedded font CSS (font data URIs are expensive to generate)
+const embeddedFontCSSCache = new Map<string, string>();
+
+/**
+ * Build the Google Fonts API URL for a font ID
+ */
+function getGoogleFontsUrl(fontId: string): string {
+  const fontInfo = GOOGLE_FONTS[fontId];
+  if (!fontInfo) return "";
+  const fontName = fontInfo.name.replace(/ /g, "+");
+  const weights = fontInfo.weights.join(";");
+  return `https://fonts.googleapis.com/css2?family=${fontName}:wght@${weights}&display=swap`;
+}
+
+/**
+ * Fetch a URL via our fonts-proxy API and return it as a base64 data URI.
+ * Using a proxy avoids CORS restrictions when fetching from fonts.gstatic.com.
+ */
+async function fontUrlToDataUri(url: string): Promise<string> {
+  try {
+    const proxyUrl = `/api/fonts-proxy?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const base64 = btoa(binary);
+    const contentType = response.headers.get("content-type") || "font/woff2";
+    return `data:${contentType};base64,${base64}`;
+  } catch (err) {
+    console.warn("Failed to embed font file:", url, err);
+    return url; // fall back to original URL
+  }
+}
+
+/**
+ * Fetch Google Fonts CSS for a font ID and return @font-face rules
+ * with all font file URLs replaced by base64 data URIs.
+ *
+ * This is needed for html-to-image export: the SVG foreignObject is rendered
+ * in an isolated origin that cannot access external <link> stylesheets or
+ * the browser's font cache. Fonts must be inlined as data URIs.
+ */
+async function buildEmbeddedFontCSS(fontId: string): Promise<string> {
+  if (embeddedFontCSSCache.has(fontId)) {
+    return embeddedFontCSSCache.get(fontId)!;
+  }
+
+  const fontInfo = GOOGLE_FONTS[fontId];
+  if (!fontInfo) return "";
+
+  const url = getGoogleFontsUrl(fontId);
+
+  let cssText: string;
+  try {
+    // Fetch Google Fonts CSS through our proxy (avoids CORS restrictions)
+    const proxyUrl = `/api/fonts-proxy?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    cssText = await response.text();
+  } catch (err) {
+    console.warn("Failed to fetch Google Fonts CSS:", fontId, err);
+    return "";
+  }
+
+  // Find all font URLs in the CSS: url(https://fonts.gstatic.com/...)
+  const urlPattern = /url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/g;
+  const fontUrls = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = urlPattern.exec(cssText)) !== null) {
+    fontUrls.add(match[1]);
+  }
+
+  // Download all font files in parallel and replace URLs with data URIs
+  const replacements = new Map<string, string>();
+  await Promise.allSettled(
+    Array.from(fontUrls).map(async (fontUrl) => {
+      const dataUri = await fontUrlToDataUri(fontUrl);
+      replacements.set(fontUrl, dataUri);
+    })
+  );
+
+  let embeddedCSS = cssText;
+  for (const [originalUrl, dataUri] of replacements) {
+    embeddedCSS = embeddedCSS.split(originalUrl).join(dataUri);
+  }
+
+  embeddedFontCSSCache.set(fontId, embeddedCSS);
+  return embeddedCSS;
+}
+
+/**
+ * Embed all currently-loaded Google Fonts as @font-face data URIs into a
+ * <style> element injected into the given container.
+ *
+ * Returns a cleanup function that removes the injected style element.
+ *
+ * Usage (before html-to-image capture):
+ *   const cleanup = await embedFontsForExport(slideElement, ["DM_Sans", "DM_Serif_Display"]);
+ *   try { await toCanvas(slideElement, opts); } finally { cleanup(); }
+ */
+export async function embedFontsForExport(
+  container: HTMLElement,
+  fontIds: string[]
+): Promise<() => void> {
+  const uniqueIds = [...new Set(fontIds.filter((id) => GOOGLE_FONTS[id]))];
+  if (uniqueIds.length === 0) return () => {};
+
+  const cssChunks = await Promise.allSettled(
+    uniqueIds.map((id) => buildEmbeddedFontCSS(id))
+  );
+
+  const combinedCSS = cssChunks
+    .map((r) => (r.status === "fulfilled" ? r.value : ""))
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (!combinedCSS) return () => {};
+
+  const style = document.createElement("style");
+  style.id = "__embedded-fonts-for-export__";
+  style.textContent = combinedCSS;
+  container.insertBefore(style, container.firstChild);
+
+  return () => {
+    if (style.parentNode) style.parentNode.removeChild(style);
+  };
+}
+
