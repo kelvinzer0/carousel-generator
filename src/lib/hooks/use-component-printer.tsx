@@ -30,6 +30,66 @@ function getSlideElements(container: HTMLElement): HTMLElement[] {
   return Array.from(items) as HTMLElement[];
 }
 
+/**
+ * Preload all <img> elements inside a slide to ensure they are fully loaded
+ * before html-to-image attempts to inline them as data URLs.
+ * Returns a cleanup function that restores original src on broken images.
+ */
+async function preloadContentImages(slideElement: HTMLElement): Promise<() => void> {
+  const images = Array.from(slideElement.querySelectorAll("img"));
+  const brokenImages: { img: HTMLImageElement; originalSrc: string }[] = [];
+
+  const loadPromises = images.map(
+    (img) =>
+      new Promise<void>((resolve) => {
+        const htmlImg = img as HTMLImageElement;
+        if (htmlImg.complete && htmlImg.naturalWidth > 0) {
+          resolve();
+          return;
+        }
+
+        const originalSrc = htmlImg.src;
+
+        const onLoad = () => {
+          cleanup();
+          resolve();
+        };
+
+        const onError = () => {
+          cleanup();
+          console.warn("Image failed to load during export, using placeholder:", originalSrc);
+          brokenImages.push({ img: htmlImg, originalSrc });
+          // Replace with a 1x1 transparent pixel so html-to-image can still inline it
+          htmlImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+          resolve();
+        };
+
+        const cleanup = () => {
+          htmlImg.removeEventListener("load", onLoad);
+          htmlImg.removeEventListener("error", onError);
+        };
+
+        htmlImg.addEventListener("load", onLoad, { once: true });
+        htmlImg.addEventListener("error", onError, { once: true });
+
+        // If the image has no src or is already a placeholder, resolve immediately
+        if (!originalSrc || originalSrc.startsWith("data:")) {
+          cleanup();
+          resolve();
+        }
+      })
+  );
+
+  await Promise.all(loadPromises);
+
+  return () => {
+    // Restore broken images to their original src after export
+    brokenImages.forEach(({ img, originalSrc }) => {
+      img.src = originalSrc;
+    });
+  };
+}
+
 function hideUIElements(slideElement: HTMLElement): () => void {
   // Use a CSS class + style tag to hide UI elements during capture.
   // This survives React re-renders (unlike holding stale DOM references).
@@ -208,6 +268,7 @@ async function captureSlideToDataUrl(
   const restoreUI = hideUIElements(slideElement);
   await document.fonts.ready;
   await preloadTextures(slideElement);
+  const restoreContentImages = await preloadContentImages(slideElement);
   const restoreGradient = prerenderGradientText(slideElement);
 
   const baseOptions: HtmlToImageOptions = {
@@ -247,6 +308,7 @@ async function captureSlideToDataUrl(
     });
   } finally {
     restoreGradient();
+    restoreContentImages();
     restoreUI();
   }
 }
@@ -327,6 +389,8 @@ export function useComponentPrinter() {
       pdf.save(filename);
     } catch (err) {
       console.error("PDF export failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`PDF export failed: ${msg}`);
     } finally {
       setIsPrinting(false);
     }
@@ -370,6 +434,8 @@ export function useComponentPrinter() {
         saveAs(zipBlob, `${filename}.zip`);
       } catch (err) {
         console.error("Export failed:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        alert(`Image export failed: ${msg}`);
       } finally {
         setIsExporting(false);
       }
