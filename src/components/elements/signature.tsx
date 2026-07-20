@@ -28,6 +28,7 @@ export function Signature({
 
   const nameStyle: React.CSSProperties = {
     fontFamily,
+    whiteSpace: "nowrap",
     ...(primaryHasGradientTexture
       ? getTextStyleCSS(primaryStyle)
       : { color: config.theme.primary }),
@@ -55,21 +56,22 @@ export function Signature({
 
   return (
     <div
-      className={cn("flex justify-start flex-row gap-3 items-center", className)}
+      className={cn("flex justify-start flex-row gap-3 items-center min-w-0", className)}
+      style={{ flexShrink: 1 }}
     >
       {config.brand.avatar?.source.src && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={config.brand.avatar.source.src}
           alt={config.brand.name}
-          className="w-12 h-12 rounded-full"
+          className="w-12 h-12 rounded-full flex-shrink-0"
           style={{
             opacity: config.brand.avatar.style.opacity / 100,
           }}
         />
       )}
-      <div className="flex items-start flex-col">
-        <span style={nameStyle}>{config.brand.name}</span>
+      <div className="flex items-start flex-col min-w-0 overflow-hidden">
+        <span style={nameStyle} className="block truncate">{config.brand.name}</span>
         <span className="flex items-center flex-row gap-1.5">
           {platformSvg && (
             <svg
@@ -80,7 +82,7 @@ export function Signature({
               <path d={platformSvg} />
             </svg>
           )}
-          <span style={handleTextStyle}>{config.brand.handle}</span>
+          <span style={handleTextStyle} className="truncate">{config.brand.handle}</span>
         </span>
       </div>
     </div>
