@@ -152,7 +152,15 @@ function renderElementToCanvas(
   const height = el.offsetHeight;
   if (width === 0 || height === 0) return null;
 
-  const text = el.textContent || "";
+  // Prefer innerText over textContent: innerText converts <br> → \n
+  // which preserves explicit line breaks in gradient mirror divs.
+  // Fall back to textContent for elements that don't support innerText.
+  let text = "";
+  if ("innerText" in el && el.innerHTML.includes("<br")) {
+    text = (el as HTMLElement).innerText || "";
+  } else {
+    text = el.textContent || "";
+  }
   if (!text.trim()) return null;
 
   const fontSize = computed.fontSize;
@@ -621,24 +629,38 @@ function wrapText(
   maxWidth: number,
   letterSpacing: number = 0
 ): string[] {
-  const words = text.split(/\s+/);
   const lines: string[] = [];
-  let currentLine = "";
 
   const measure = (s: string) =>
     ctx.measureText(s).width + letterSpacing * Math.max(0, s.length - 1);
 
-  words.forEach((word) => {
-    const testLine = currentLine ? currentLine + " " + word : word;
-    if (measure(testLine) > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  });
+  // Split on explicit newlines first (\n from innerText / pre-wrap),
+  // then word-wrap each paragraph independently.
+  const paragraphs = text.split(/\n/);
 
-  if (currentLine) lines.push(currentLine);
+  for (const paragraph of paragraphs) {
+    if (paragraph === "") {
+      // Preserve empty lines (blank paragraphs)
+      lines.push("");
+      continue;
+    }
+
+    const words = paragraph.split(/\s+/);
+    let currentLine = "";
+
+    for (const word of words) {
+      const testLine = currentLine ? currentLine + " " + word : word;
+      if (measure(testLine) > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine) lines.push(currentLine);
+  }
+
   return lines.length > 0 ? lines : [text];
 }
 

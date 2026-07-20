@@ -73,6 +73,7 @@ const GradientTextarea = React.forwardRef<
     padding: 0,
     margin: 0,
     border: "none",
+    // pre-wrap must be on a block element — keep on div, not span
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
   };
@@ -81,7 +82,9 @@ const GradientTextarea = React.forwardRef<
 
   return (
     <div className="w-full relative">
-      {/* Mirror div — behind, gradient clipped to text */}
+      {/* Mirror div — behind, gradient clipped to text.
+          dangerouslySetInnerHTML is on the block <div> (not an inner <span>)
+          so that white-space: pre-wrap correctly preserves newlines. */}
       <div
         aria-hidden="true"
         className={cn("w-full overflow-hidden", className)}
@@ -100,11 +103,13 @@ const GradientTextarea = React.forwardRef<
           position: "absolute",
           inset: 0,
           zIndex: 0,
+          // height auto so it can grow with content
+          height: "auto",
+          minHeight: "100%",
         }}
-      >
-        {/* Mirror the text content — renders markdown bold/italic, trailing newline for consistent height */}
-        <span dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(textValue) + "\n" }} />
-      </div>
+        // Render directly on the block div (not an inner span) so pre-wrap works
+        dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(textValue) + "\n" }}
+      />
 
       {/* Editable textarea — front, transparent text, visible caret */}
       <TextareaAutosize
@@ -132,3 +137,4 @@ const GradientTextarea = React.forwardRef<
 GradientTextarea.displayName = "GradientTextarea";
 
 export { GradientTextarea };
+

@@ -102,38 +102,74 @@ export const GOOGLE_FONTS: Record<string, { name: string; category: string; weig
 
 // Cache for loaded fonts to avoid duplicate <link> tags
 const loadedFonts = new Set<string>();
+// Cache promises to avoid duplicate loads
+const pendingFonts = new Map<string, Promise<void>>();
 
 /**
- * Dynamically load a Google Font via CSS API
+ * Build font descriptor strings for document.fonts.load()
+ * e.g. "700 1em Inter", "400 1em DM Serif Display"
+ */
+function getFontDescriptors(fontInfo: { name: string; weights: number[] }): string[] {
+  return fontInfo.weights.map((w) => `${w} 1em "${fontInfo.name}"`);
+}
+
+/**
+ * Dynamically load a Google Font via CSS API.
+ * Resolves only after the font is truly available in document.fonts.
  */
 export function loadGoogleFont(fontId: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (loadedFonts.has(fontId)) {
-      resolve();
-      return;
-    }
+  // Already fully loaded
+  if (loadedFonts.has(fontId)) {
+    return Promise.resolve();
+  }
 
-    const fontInfo = GOOGLE_FONTS[fontId];
-    if (!fontInfo) {
-      reject(new Error(`Font ${fontId} not found in Google Fonts list`));
-      return;
-    }
+  // Return existing pending promise
+  const existing = pendingFonts.get(fontId);
+  if (existing) return existing;
 
-    const fontName = fontInfo.name.replace(/ /g, "+");
-    const weights = fontInfo.weights.join(";");
-    const url = `https://fonts.googleapis.com/css2?family=${fontName}:wght@${weights}&display=swap`;
+  const fontInfo = GOOGLE_FONTS[fontId];
+  if (!fontInfo) {
+    return Promise.reject(new Error(`Font ${fontId} not found in Google Fonts list`));
+  }
 
+  const fontName = fontInfo.name.replace(/ /g, "+");
+  const weights = fontInfo.weights.join(";");
+  const url = `https://fonts.googleapis.com/css2?family=${fontName}:wght@${weights}&display=swap`;
+
+  const promise = new Promise<void>((resolve, reject) => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = url;
-    link.onload = () => {
-      loadedFonts.add(fontId);
-      resolve();
+
+    link.onload = async () => {
+      try {
+        // Wait until at least one weight is truly loaded in the browser
+        const descriptors = getFontDescriptors(fontInfo);
+        await Promise.allSettled(
+          descriptors.map((d) => document.fonts.load(d))
+        );
+        loadedFonts.add(fontId);
+        resolve();
+      } catch {
+        // Still mark as resolved even if fonts.load fails (e.g. some browsers)
+        loadedFonts.add(fontId);
+        resolve();
+      }
     };
-    link.onerror = () => reject(new Error(`Failed to load font: ${fontInfo.name}`));
+
+    link.onerror = () => {
+      pendingFonts.delete(fontId);
+      reject(new Error(`Failed to load font: ${fontInfo.name}`));
+    };
 
     document.head.appendChild(link);
   });
+
+  pendingFonts.set(fontId, promise);
+  // Clean up pending map once settled
+  promise.finally(() => pendingFonts.delete(fontId));
+
+  return promise;
 }
 
 /**

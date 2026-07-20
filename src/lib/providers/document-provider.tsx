@@ -18,6 +18,8 @@ import { defaultValues } from "@/lib/default-document";
 import { KeysProvider } from "@/lib/providers/keys-context";
 import { useKeys } from "@/lib/hooks/use-keys";
 import { StatusProvider } from "@/lib/providers/editor-status-context";
+import { useEffect } from "react";
+import { preloadFonts } from "@/lib/google-fonts";
 
 const FORM_DATA_KEY = "documentFormKey";
 
@@ -27,6 +29,19 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     defaultValues,
     DocumentSchema
   );
+
+  // Preload fonts as early as possible — before child components mount.
+  // We read from the persisted data so user's chosen fonts are fetched immediately.
+  useEffect(() => {
+    const saved = getSavedData();
+    const fontIds = [
+      saved?.config?.fonts?.font1 ?? defaultValues.config.fonts.font1,
+      saved?.config?.fonts?.font2 ?? defaultValues.config.fonts.font2,
+    ].filter(Boolean) as string[];
+    preloadFonts([...new Set(fontIds)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const documentForm: DocumentFormReturn = useForm<
     z.infer<typeof DocumentSchema>
   >({

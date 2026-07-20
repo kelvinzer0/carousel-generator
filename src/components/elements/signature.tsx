@@ -29,8 +29,10 @@ export function Signature({
   const nameStyle: React.CSSProperties = {
     fontFamily,
     whiteSpace: "nowrap",
+    // When using gradient/texture, add a small paddingRight so the gradient
+    // paint region isn't clipped at the last character's right edge.
     ...(primaryHasGradientTexture
-      ? getTextStyleCSS(primaryStyle)
+      ? { ...getTextStyleCSS(primaryStyle), paddingRight: "0.1em" }
       : { color: config.theme.primary }),
   };
 
@@ -70,8 +72,16 @@ export function Signature({
           }}
         />
       )}
-      <div className="flex items-start flex-col min-w-0 overflow-hidden">
-        <span style={nameStyle} className="block truncate">{config.brand.name}</span>
+      <div className="flex items-start flex-col min-w-0">
+        {/* 'truncate' is intentionally omitted when gradient is active:
+            overflow:hidden clips the gradient paint region, cutting the last
+            characters. Instead we rely on the parent min-w-0 to constrain width. */}
+        <span
+          style={nameStyle}
+          className={primaryHasGradientTexture ? "block max-w-full" : "block truncate"}
+        >
+          {config.brand.name}
+        </span>
         <span className="flex items-center flex-row gap-1.5">
           {platformSvg && (
             <svg
