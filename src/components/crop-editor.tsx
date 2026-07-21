@@ -3,19 +3,22 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { CropArea } from "@/lib/validation/image-schema";
 import { Button } from "@/components/ui/button";
-import { Crop, RotateCcw } from "lucide-react";
+import { Crop, RotateCcw, Check } from "lucide-react";
+import { applyImageEdits } from "@/lib/apply-image-edits";
 
 interface CropEditorProps {
   src: string;
   crop: CropArea | undefined;
   onChange: (crop: CropArea | undefined) => void;
+  onApply?: (newSrc: string) => void;
 }
 
 type Handle = "move" | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
 const MIN_SIZE = 5; // minimum 5%
 
-export function CropEditor({ src, crop, onChange }: CropEditorProps) {
+export function CropEditor({ src, crop, onChange, onApply }: CropEditorProps) {
+  const [applying, setApplying] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const [dragging, setDragging] = useState(false);
   const [activeHandle, setActiveHandle] = useState<Handle | null>(null);
@@ -251,17 +254,40 @@ export function CropEditor({ src, crop, onChange }: CropEditorProps) {
         <span className="text-xs text-muted-foreground">
           {crop ? `${Math.round(crop.width)}% × ${Math.round(crop.height)}%` : "Full image"}
         </span>
-        {crop && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 text-xs"
-            onClick={resetCrop}
-          >
-            <RotateCcw className="w-3 h-3 mr-1" />
-            Reset
-          </Button>
-        )}
+        <div className="flex gap-1">
+          {crop && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs"
+              onClick={resetCrop}
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Reset
+            </Button>
+          )}
+          {crop && onApply && (
+            <Button
+              size="sm"
+              className="h-6 text-xs"
+              disabled={applying}
+              onClick={async () => {
+                setApplying(true);
+                try {
+                  const dataUrl = await applyImageEdits(src, crop);
+                  onApply(dataUrl);
+                } catch (err) {
+                  console.error("Apply crop failed:", err);
+                } finally {
+                  setApplying(false);
+                }
+              }}
+            >
+              <Check className="w-3 h-3 mr-1" />
+              {applying ? "Applying..." : "Apply"}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

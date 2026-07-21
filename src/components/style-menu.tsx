@@ -138,6 +138,11 @@ export function StyleMenu({
               onChange={(crop: CropArea | undefined) => {
                 form.setValue(`${elementPath}.crop` as any, crop, { shouldDirty: true });
               }}
+              onApply={(newSrc: string) => {
+                form.setValue(`${elementPath}.source.src` as any, newSrc, { shouldDirty: true });
+                form.setValue(`${elementPath}.source.type` as any, "UPLOAD", { shouldDirty: true });
+                form.setValue(`${elementPath}.crop` as any, undefined, { shouldDirty: true });
+              }}
             />
           </div>
         ) : null}
@@ -149,6 +154,11 @@ export function StyleMenu({
               areas={(form.getValues(elementPath as any)?.censorAreas || []) as CensorArea[]}
               onChange={(areas: CensorArea[]) => {
                 form.setValue(`${elementPath}.censorAreas` as any, areas, { shouldDirty: true });
+              }}
+              onApply={(newSrc: string) => {
+                form.setValue(`${elementPath}.source.src` as any, newSrc, { shouldDirty: true });
+                form.setValue(`${elementPath}.source.type` as any, "UPLOAD", { shouldDirty: true });
+                form.setValue(`${elementPath}.censorAreas` as any, [], { shouldDirty: true });
               }}
             />
           </div>

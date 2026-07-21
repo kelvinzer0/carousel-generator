@@ -3,21 +3,24 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { CensorArea } from "@/lib/validation/image-schema";
 import { Button } from "@/components/ui/button";
-import { Trash2, Square } from "lucide-react";
+import { Trash2, Square, Check } from "lucide-react";
+import { applyImageEdits } from "@/lib/apply-image-edits";
 
 interface CensorEditorProps {
   src: string;
   areas: CensorArea[];
   onChange: (areas: CensorArea[]) => void;
+  onApply?: (newSrc: string) => void;
 }
 
-export function CensorEditor({ src, areas, onChange }: CensorEditorProps) {
+export function CensorEditor({ src, areas, onChange, onApply }: CensorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [start, setStart] = useState<{ x: number; y: number } | null>(null);
   const [current, setCurrent] = useState<{ x: number; y: number } | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   const getPercent = useCallback(
     (e: React.MouseEvent) => {
@@ -157,20 +160,43 @@ export function CensorEditor({ src, areas, onChange }: CensorEditorProps) {
         )}
       </div>
 
-      {/* Area count */}
+      {/* Area count + actions */}
       {areas.length > 0 && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
             {areas.length} censored area{areas.length > 1 ? "s" : ""}
           </span>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 text-xs text-destructive"
-            onClick={() => onChange([])}
-          >
-            Clear all
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs text-destructive"
+              onClick={() => onChange([])}
+            >
+              Clear all
+            </Button>
+            {onApply && (
+              <Button
+                size="sm"
+                className="h-6 text-xs"
+                disabled={applying}
+                onClick={async () => {
+                  setApplying(true);
+                  try {
+                    const dataUrl = await applyImageEdits(src, undefined, areas);
+                    onApply(dataUrl);
+                  } catch (err) {
+                    console.error("Apply censor failed:", err);
+                  } finally {
+                    setApplying(false);
+                  }
+                }}
+              >
+                <Check className="w-3 h-3 mr-1" />
+                {applying ? "Applying..." : "Apply"}
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>
