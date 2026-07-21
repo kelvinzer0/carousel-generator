@@ -37,10 +37,23 @@ export function ContentImage({
   const censorAreas = (image as any)?.censorAreas || [];
   const crop = (image as any)?.crop as { x: number; y: number; width: number; height: number } | undefined;
 
-  // Build clip-path from crop (inset: top right bottom left)
-  const cropClip = crop
-    ? `inset(${crop.y}% ${100 - crop.x - crop.width}% ${100 - crop.y - crop.height}% ${crop.x}%`
+  // Crop is applied on the container via clip-path so object-fit on <img> works normally
+  // inset(top right bottom left)
+  const containerClip = crop
+    ? `inset(${crop.y}% ${100 - crop.x - crop.width}% ${100 - crop.y - crop.height}% ${crop.x}%)`
     : undefined;
+
+  // Censor areas need to be remapped if crop is active
+  // When crop is active, the visible region is [crop.x..crop.x+crop.width] × [crop.y..crop.y+crop.height]
+  // Censor coords are in original image % space, so we remap to the cropped container space
+  const remapCensor = crop
+    ? (area: { x: number; y: number; width: number; height: number }) => ({
+        x: ((area.x - crop.x) / crop.width) * 100,
+        y: ((area.y - crop.y) / crop.height) * 100,
+        width: (area.width / crop.width) * 100,
+        height: (area.height / crop.height) * 100,
+      })
+    : (area: { x: number; y: number; width: number; height: number }) => area;
 
   return (
     <div
@@ -51,6 +64,9 @@ export function ContentImage({
           "outline-input ring-2 ring-offset-2 ring-ring",
         className
       )}
+      style={{
+        clipPath: containerClip,
+      }}
     >
       <img
         alt="slide image"
@@ -65,26 +81,28 @@ export function ContentImage({
         )}
         style={{
           opacity: (image?.style?.opacity ?? 100) / 100,
-          clipPath: cropClip,
         }}
         onClick={(event) => {
           setCurrentPage(pageNumber);
           setCurrentSelection(fieldName, event);
         }}
       />
-      {/* Censor overlays */}
-      {censorAreas.map((area: any, i: number) => (
-        <div
-          key={i}
-          className="absolute bg-black pointer-events-none"
-          style={{
-            left: `${area.x}%`,
-            top: `${area.y}%`,
-            width: `${area.width}%`,
-            height: `${area.height}%`,
-          }}
-        />
-      ))}
+      {/* Censor overlays — remapped into crop space if crop is active */}
+      {censorAreas.map((area: any, i: number) => {
+        const r = remapCensor(area);
+        return (
+          <div
+            key={i}
+            className="absolute bg-black pointer-events-none"
+            style={{
+              left: `${r.x}%`,
+              top: `${r.y}%`,
+              width: `${r.width}%`,
+              height: `${r.height}%`,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
