@@ -4,16 +4,40 @@ export const runtime = "edge";
 
 // Allowed domains for image proxy — prevents SSRF abuse
 const ALLOWED_DOMAINS = [
+  // Stock / free images
   "images.unsplash.com",
   "images.pexels.com",
   "pixabay.com",
   "cdn.pixabay.com",
   "placehold.co",
-  "placehold.co",
   "picsum.photos",
   "loremflickr.com",
   "upload.wikimedia.org",
-  "cdn.pixabay.com",
+  // WeChat / Chinese platforms
+  "mmbiz.qpic.cn",
+  // Common CDNs
+  "imgur.com",
+  "i.imgur.com",
+  "cdn.jsdelivr.net",
+  "raw.githubusercontent.com",
+  "github.com",
+  "avatars.githubusercontent.com",
+  "img.shields.io",
+  "images.ctfassets.net",
+  "res.cloudinary.com",
+  "storage.googleapis.com",
+  "firebasestorage.googleapis.com",
+  "s3.amazonaws.com",
+  // Social / blog platforms
+  "pbs.twimg.com",
+  "abs.twimg.com",
+  "scontent.cdninstagram.com",
+  "media.licdn.com",
+  "blogger.googleusercontent.com",
+  "1.bp.blogspot.com",
+  "2.bp.blogspot.com",
+  "3.bp.blogspot.com",
+  "4.bp.blogspot.com",
 ];
 
 export async function GET(request: NextRequest) {
@@ -46,12 +70,16 @@ export async function GET(request: NextRequest) {
       return new NextResponse("Domain not allowed", { status: 403 });
     }
 
+    // Build Referer: use image origin as base. Some CDNs (WeChat mmbiz.qpic.cn)
+    // accept self-referer; others need empty. Default to image origin.
+    const referer = parsed.origin + "/";
+
     const response = await fetch(imageUrl, {
       headers: {
         "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        "Referer": parsed.origin + "/",
+        "Referer": referer,
         "Sec-Ch-Ua": "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
         "Sec-Ch-Ua-Mobile": "?0",
         "Sec-Ch-Ua-Platform": "\"Windows\"",
