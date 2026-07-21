@@ -3,15 +3,19 @@
  * 
  * Uses DOMPurify to sanitize HTML content before rendering with
  * dangerouslySetInnerHTML to prevent XSS attacks.
+ * 
+ * Client-side only (DOMPurify requires DOM API).
  */
 
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from "dompurify";
 
 /**
  * Sanitize HTML content for safe rendering.
  * Removes script tags, event handlers, and other dangerous content.
+ * No-op on server (returns input as-is).
  */
 export function sanitizeHtml(html: string): string {
+  if (typeof window === "undefined") return html;
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       "b", "i", "em", "strong", "a", "p", "br", "ul", "ol", "li",
@@ -29,8 +33,10 @@ export function sanitizeHtml(html: string): string {
 /**
  * Sanitize inline markdown HTML (simpler subset).
  * Used for inline text rendering with basic formatting.
+ * No-op on server (returns input as-is).
  */
 export function sanitizeInlineHtml(html: string): string {
+  if (typeof window === "undefined") return html;
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       "b", "i", "em", "strong", "code", "mark", "br", "span",
