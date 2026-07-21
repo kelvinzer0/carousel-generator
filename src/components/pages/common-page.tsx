@@ -102,7 +102,7 @@ export function CommonPage({
       </div>
 
       {/* Legacy slide background image */}
-      {slide.backgroundImage?.source.src ? (
+      {slide.backgroundImage?.source?.src ? (
         <BackgroundImageLayer image={slide.backgroundImage} className="z-[1]" />
       ) : null}
 

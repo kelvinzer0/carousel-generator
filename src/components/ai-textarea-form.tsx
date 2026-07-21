@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFormContext } from "react-hook-form";
 import * as z from "zod";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -122,7 +123,7 @@ export function AITextAreaForm() {
         s.elements.some(
           (el) =>
             el.type === "ContentImage" &&
-            el.source.src &&
+            el?.source?.src &&
             !el.source.src.startsWith("blob:") &&
             !el.source.src.startsWith("data:")
         )
@@ -201,9 +202,11 @@ export function AITextAreaForm() {
                   <div
                     className="min-h-[200px] max-h-[400px] overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm"
                     dangerouslySetInnerHTML={{
-                      __html: promptValue
-                        ? simpleMarkdownToHtml(promptValue)
-                        : '<p class="text-muted-foreground italic">Nothing to preview...</p>',
+                      __html: sanitizeHtml(
+                        promptValue
+                          ? simpleMarkdownToHtml(promptValue)
+                          : '<p class="text-muted-foreground italic">Nothing to preview...</p>'
+                      ),
                     }}
                   />
                 )}

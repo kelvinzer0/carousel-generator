@@ -3,6 +3,7 @@
 import TextareaAutosize from "react-textarea-autosize";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { sanitizeInlineHtml } from "@/lib/sanitize";
 
 /** Convert inline markdown (bold, italic) to HTML */
 function inlineMarkdownToHtml(text: string): string {
@@ -108,7 +109,7 @@ const GradientTextarea = React.forwardRef<
           minHeight: "100%",
         }}
         // Render directly on the block div (not an inner span) so pre-wrap works
-        dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(textValue) + "\n" }}
+        dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(inlineMarkdownToHtml(textValue) + "\n") }}
       />
 
       {/* Editable textarea — front, transparent text, visible caret */}

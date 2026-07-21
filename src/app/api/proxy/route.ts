@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
+// Allowed domains for image proxy — prevents SSRF abuse
+const ALLOWED_DOMAINS = [
+  "images.unsplash.com",
+  "images.pexels.com",
+  "pixabay.com",
+  "cdn.pixabay.com",
+  "placehold.co",
+  "placehold.co",
+  "picsum.photos",
+  "loremflickr.com",
+  "upload.wikimedia.org",
+  "cdn.pixabay.com",
+];
+
 export async function GET(request: NextRequest) {
   try {
     let url = new URL(request.url);
@@ -22,6 +36,14 @@ export async function GET(request: NextRequest) {
     // Only allow http/https
     if (!["http:", "https:"].includes(parsed.protocol)) {
       return new NextResponse("Only HTTP/HTTPS URLs allowed", { status: 400 });
+    }
+
+    // Security: only proxy allowed domains (prevents SSRF)
+    const isAllowed = ALLOWED_DOMAINS.some(
+      (domain) => parsed.hostname === domain || parsed.hostname.endsWith("." + domain)
+    );
+    if (!isAllowed) {
+      return new NextResponse("Domain not allowed", { status: 403 });
     }
 
     const response = await fetch(imageUrl, {

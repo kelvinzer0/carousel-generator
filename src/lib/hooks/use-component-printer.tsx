@@ -3,6 +3,7 @@ import { SIZE_PRESETS, SizePresetKey } from "@/lib/page-size";
 import { useFieldArrayValues } from "@/lib/hooks/use-field-array-values";
 import { useFormContext } from "react-hook-form";
 import { DocumentFormReturn } from "@/lib/document-form-types";
+import { useToast } from "@/components/ui/use-toast";
 import { toCanvas } from "html-to-image";
 import { Options as HtmlToImageOptions } from "html-to-image/lib/types";
 import { jsPDF } from "jspdf";
@@ -359,6 +360,7 @@ export function useComponentPrinter() {
     [font1, font2]
   );
 
+  const { toast } = useToast();
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -403,11 +405,15 @@ export function useComponentPrinter() {
     } catch (err) {
       console.error("PDF export failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`PDF export failed: ${msg}`);
+      toast({
+        title: "PDF Export Failed",
+        description: msg,
+        variant: "destructive",
+      });
     } finally {
       setIsPrinting(false);
     }
-  }, [watch, SIZE, fontIds]);
+  }, [watch, SIZE, fontIds, toast]);
 
   // ── Download Images (ZIP) ─────────────────────────────────────
 
@@ -450,12 +456,16 @@ export function useComponentPrinter() {
       } catch (err) {
         console.error("Export failed:", err);
         const msg = err instanceof Error ? err.message : String(err);
-        alert(`Image export failed: ${msg}`);
+        toast({
+          title: "Image Export Failed",
+          description: msg,
+          variant: "destructive",
+        });
       } finally {
         setIsExporting(false);
       }
     },
-    [watch, numPages]
+    [watch, numPages, toast]
   );
 
   // ── Upload PDF to RemixPost ───────────────────────────────────

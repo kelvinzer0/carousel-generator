@@ -61,14 +61,14 @@ export function Signature({
       className={cn("flex justify-start flex-row gap-3 items-center min-w-0", className)}
       style={{ flexShrink: 1 }}
     >
-      {config.brand.avatar?.source.src && (
+      {config.brand.avatar?.source?.src && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={config.brand.avatar.source.src}
+          src={config.brand.avatar?.source?.src}
           alt={config.brand.name}
           className="w-12 h-12 rounded-full flex-shrink-0"
           style={{
-            opacity: config.brand.avatar.style.opacity / 100,
+            opacity: (config.brand.avatar?.style?.opacity ?? 100) / 100,
           }}
         />
       )}

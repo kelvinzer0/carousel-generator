@@ -20,10 +20,10 @@ export function BackgroundImageLayer({
     >
       <img
         alt="background image"
-        src={image.source.src} // TODO: Extract cover/contain into a setting for images
+        src={image?.source?.src || ""} // TODO: Extract cover/contain into a setting for images
         className={cn("overflow-hidden object-cover w-full h-full")}
         style={{
-          opacity: image.style.opacity / 100,
+          opacity: (image?.style?.opacity ?? 100) / 100,
         }}
       />
     </div>

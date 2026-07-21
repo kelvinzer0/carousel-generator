@@ -4,6 +4,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { sanitizeInlineHtml } from "@/lib/sanitize";
 
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
@@ -75,7 +76,7 @@ const AutoTextarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             inset: 0,
             zIndex: 0,
           }}
-          dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(textValue) + "\n" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(inlineMarkdownToHtml(textValue) + "\n") }}
         />
         {/* Editable textarea — front, transparent text, visible caret */}
         {/* @ts-ignore Style works ok */}

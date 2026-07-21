@@ -30,7 +30,7 @@ export function ContentImage({
   const { setCurrentPage } = usePagerContext();
   const { currentSelection, setCurrentSelection } = useSelectionContext();
   const pageNumber = getSlideNumber(fieldName);
-  const source = image.source.src || "https://placehold.co/400x200";
+  const source = image?.source?.src || "https://placehold.co/400x200";
 
   // TODO: Convert to Toggle to make it accessible. Control with selection
 
@@ -51,14 +51,14 @@ export function ContentImage({
         className={cn(
           // shadow-md or any box shadow not supported by html2canvas
           "rounded-md overflow-hidden",
-          image.style.objectFit == ObjectFitType.enum.Cover
+          image?.style?.objectFit == ObjectFitType.enum.Cover
             ? "object-cover w-full h-full"
-            : image.style.objectFit == ObjectFitType.enum.Contain
+            : image?.style?.objectFit == ObjectFitType.enum.Contain
             ? "object-contain w-fit h-fit"
             : ""
         )}
         style={{
-          opacity: image.style.opacity / 100,
+          opacity: (image?.style?.opacity ?? 100) / 100,
         }}
         onClick={(event) => {
           setCurrentPage(pageNumber);
