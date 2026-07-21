@@ -26,6 +26,7 @@ type ParsedElement =
       type: "ContentImage";
       source: { src: string; type: ImageInputType };
       style: { opacity: number; objectFit: "Cover" };
+      censorAreas: { x: number; y: number; width: number; height: number }[];
     };
 
 /** Split markdown into slide blocks by top-level headings */
