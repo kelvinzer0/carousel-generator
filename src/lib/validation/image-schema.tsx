@@ -52,6 +52,14 @@ export const ImageSchema = z.object({
   style: ImageStyleSchema.default({}),
 });
 
+export const CropAreaSchema = z.object({
+  x: z.number().min(0).max(100),      // left %
+  y: z.number().min(0).max(100),      // top %
+  width: z.number().min(1).max(100),  // width %
+  height: z.number().min(1).max(100), // height %
+});
+export type CropArea = z.infer<typeof CropAreaSchema>;
+
 export const ContentImageSchema = z.object({
   type: z
     .literal(ElementType.enum.ContentImage)
@@ -59,6 +67,7 @@ export const ContentImageSchema = z.object({
   source: ImageSourceSchema.default(DEFAULT_IMAGE_SOURCE),
   style: ContentImageStyleSchema.default({}),
   censorAreas: z.array(CensorAreaSchema).default([]),
+  crop: CropAreaSchema.optional(),
 });
 
 export const DEFAULT_CONTENT_IMAGE_INPUT: z.infer<typeof ContentImageSchema> =

@@ -35,12 +35,18 @@ export function ContentImage({
   // TODO: Convert to Toggle to make it accessible. Control with selection
 
   const censorAreas = (image as any)?.censorAreas || [];
+  const crop = (image as any)?.crop as { x: number; y: number; width: number; height: number } | undefined;
+
+  // Build clip-path from crop (inset: top right bottom left)
+  const cropClip = crop
+    ? `inset(${crop.y}% ${100 - crop.x - crop.width}% ${100 - crop.y - crop.height}% ${crop.x}%`
+    : undefined;
 
   return (
     <div
       id={"content-image-" + fieldName}
       className={cn(
-        "relative flex flex-col h-full w-full outline-transparent rounded-md ring-offset-background",
+        "relative flex flex-col h-full w-full outline-transparent rounded-md ring-offset-background overflow-hidden",
         currentSelection == fieldName &&
           "outline-input ring-2 ring-offset-2 ring-ring",
         className
@@ -59,6 +65,7 @@ export function ContentImage({
         )}
         style={{
           opacity: (image?.style?.opacity ?? 100) / 100,
+          clipPath: cropClip,
         }}
         onClick={(event) => {
           setCurrentPage(pageNumber);
