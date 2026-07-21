@@ -129,6 +129,7 @@ function parseBlock(block: string): { elements: ParsedElement[]; decorativeEmoji
         type: "ContentImage",
         source: { src: imgMatch[2], type: ImageInputType.Url },
         style: { opacity: 100, objectFit: "Cover" },
+        censorAreas: [],
       });
       continue;
     }
@@ -292,6 +293,7 @@ export function parseMarkdownToSlides(
               type: "ContentImage" as const,
               source: el.source,
               style: el.style,
+              censorAreas: [],
             };
           }
           return {

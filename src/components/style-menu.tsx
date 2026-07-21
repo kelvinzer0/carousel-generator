@@ -25,7 +25,8 @@ import {
 import { FontSizeType, TextALignType } from "@/lib/validation/text-schema";
 import { OpacityFormField } from "@/components/forms/fields/opacity-form-field";
 import { ImageSourceFormField } from "@/components/forms/fields/image-source-form-field";
-import { ObjectFitType } from "@/lib/validation/image-schema";
+import { ObjectFitType, CensorArea } from "@/lib/validation/image-schema";
+import { CensorEditor } from "@/components/censor-editor";
 import { ElementType } from "@/lib/validation/element-type";
 import {
   TypographyFieldName,
@@ -126,6 +127,18 @@ export function StyleMenu({
               />
             </div>
           </>
+        ) : null}
+        {type == ElementType.enum.ContentImage ? (
+          <div className="w-full flex flex-col gap-3">
+            <h4 className="text-base font-semibold">Censor</h4>
+            <CensorEditor
+              src={form.getValues(`${elementPath}.source.src` as ImageSourceSrcFieldPath) || "https://placehold.co/400x200"}
+              areas={(form.getValues(elementPath as any)?.censorAreas || []) as CensorArea[]}
+              onChange={(areas: CensorArea[]) => {
+                form.setValue(`${elementPath}.censorAreas` as any, areas, { shouldDirty: true });
+              }}
+            />
+          </div>
         ) : null}
         {style && Object.hasOwn(style, "opacity") ? (
           <>

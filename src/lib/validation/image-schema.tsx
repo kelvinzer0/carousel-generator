@@ -12,6 +12,14 @@ const ImageDataUrlSchema = z
 export const ObjectFitType = z.enum(["Cover", "Contain"]);
 export type ObjectFitType = z.infer<typeof ObjectFitType>;
 
+export const CensorAreaSchema = z.object({
+  x: z.number().min(0).max(100),      // left %
+  y: z.number().min(0).max(100),      // top %
+  width: z.number().min(0).max(100),  // width %
+  height: z.number().min(0).max(100), // height %
+});
+export type CensorArea = z.infer<typeof CensorAreaSchema>;
+
 export const ImageStyleSchema = z.object({
   opacity: z.number().positive().lte(100).default(100),
 });
@@ -50,6 +58,7 @@ export const ContentImageSchema = z.object({
     .default(ElementType.enum.ContentImage),
   source: ImageSourceSchema.default(DEFAULT_IMAGE_SOURCE),
   style: ContentImageStyleSchema.default({}),
+  censorAreas: z.array(CensorAreaSchema).default([]),
 });
 
 export const DEFAULT_CONTENT_IMAGE_INPUT: z.infer<typeof ContentImageSchema> =
