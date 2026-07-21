@@ -84,8 +84,10 @@ export function PixabaySearch({ onSelect, className }: PixabaySearchProps) {
   const handleSelect = useCallback(async (image: PixabayImage) => {
     const imageUrl = image.largeImageURL || image.webformatURL;
     try {
-      // Fetch image and convert to blob/data URL for reliable storage
-      const response = await fetch(imageUrl);
+      // Fetch via proxy with browser headers, convert to data URL
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(imageUrl)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error(`Proxy fetch failed: ${response.status}`);
       const blob = await response.blob();
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -93,7 +95,6 @@ export function PixabaySearch({ onSelect, className }: PixabaySearchProps) {
       };
       reader.readAsDataURL(blob);
     } catch (err) {
-      // Fallback: use URL directly
       console.error("Failed to convert image to blob:", err);
       onSelect(imageUrl);
     }
